@@ -80,7 +80,7 @@ candidates %<>%
 #   3. education
 #   4. marital status
 #   5. ethnicity             - not available before 2016
-#   6. campaign expenditures - not available for preliminary analysis
+#   6. campaign expenditures - requires matching to campaign funding dataset
 #   7. candidate's political experience
 
 # wrangle age
@@ -101,11 +101,9 @@ candidates %<>% select(-candidate.education.ID)
 
 # wrangle candidacy expenditures
 candidates %<>%
-  mutate(candidacy.expenditures = as.integer(candidacy.expenditures)) %>%
-  mutate(candidacy.expenditures = ifelse(is.na(candidacy.expenditures) |
-    candidacy.expenditures == -1, mean(candidacy.expenditures, na.rm = TRUE),
-    candidacy.expenditures)
-  )
+  mutate(exp = candidacy.expenditures) %>%
+  mutate(exp = ifelse(is.na(exp) | exp == -1, mean(exp, na.rm = TRUE), exp)) %>%
+  mutate(candidacy.expenditures = exp)
 
 # define vector for finding political occupations
 politicians <- 'VEREADOR|PREFEITO|DEPUTADO|GOVERNADOR|SENADOR|PRESIDENTE'
@@ -116,8 +114,7 @@ candidates %<>%
   mutate(candidate.experience = case_when(
     str_detect(candidate.occupation, politicians) == TRUE  ~ 1,
     str_detect(candidate.occupation, politicians) == FALSE ~ 0,
-    is.na(str_detect(candidate.occupation, politicians))   ~ 0)
-  )
+    is.na(str_detect(candidate.occupation, politicians))   ~ 0))
 
 # transform variable type to factor
 candidates %<>% mutate_at(vars(matches('education|maritalstatus')), factor)
