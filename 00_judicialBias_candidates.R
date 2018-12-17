@@ -14,6 +14,7 @@
 library(here)
 library(tidyverse)
 library(magrittr)
+library(stargazer)
 
 # load statements
 load('../2019 Electoral Crime/candidates.2012.Rda')
@@ -118,3 +119,61 @@ candidates %<>%
 
 # transform variable type to factor
 candidates %<>% mutate_at(vars(matches('education|maritalstatus')), factor)
+
+# create random court outcomes
+candidates$candidate.plaintiff <- rbinom(nrow(candidates), 1, .5)
+candidates$trial.outcome       <- rbinom(nrow(candidates), 1, .5)
+
+################################################################################
+# choose variables that will be used in the analysis
+# define outcomes and their labels
+outcomes <- c('candidate.plaintiff', 'trial.outcome')
+o.labels <- c('Politician is Plaintiff', 'Probability of Favorable Ruling')
+
+# define independent variables and their labels
+variables <- c('candidate.age', 'candidate.male', 'candidate.education',
+               'candidate.maritalstatus', 'candidate.experience',
+               'candidacy.expenditures')
+var.label <- c('Age', 'Male', 'Level of Education', 'Marital Status',
+               'Political Experience', 'Campaign Expenditures (ln)')
+
+################################################################################
+# descriptive statistics
+# create dir for prospectus
+dir.create('./proposal2')
+
+# produce summary statistics table
+stargazer(
+
+  # summmary table
+  candidates[, c(variables, outcomes)] %>%
+  mutate(candidacy.expenditures = log(candidacy.expenditures + 1)) %>%
+  as.data.frame(),
+
+  # table cosmetics
+  type = 'text',
+  title = 'Descriptive Statistics',
+  style = 'default',
+  summary = TRUE,
+  # out = './proposal2/tab_sumstats.tex',
+  out.header = FALSE,
+  covariate.labels = c(var.label[c(1:2, 5:6)], o.labels),
+  align = TRUE,
+  digit.separate = 3,
+  digits = 3,
+  digits.extra = 0,
+  font.size = 'scriptsize',
+  header = FALSE,
+  initial.zero = FALSE,
+  model.names = FALSE,
+  label = 'tab:sumstats',
+  no.space = FALSE,
+  table.placement = '!htbp',
+  summary.logical = TRUE,
+  summary.stat = c('n', 'mean', 'sd', 'min', 'max')
+)
+
+################################################################################
+# simulations
+
+
