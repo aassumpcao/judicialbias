@@ -12,3 +12,9 @@ library(stargazer)
 library(lfe)
 library(extrafont)
 
+# load rproj (comment out if using another R IDE)
+rstudioapi::openProject('2019 Judicial Bias.Rproj')
+
+# wrangle candidate data
+source('00_judicialBias_candidates.R')
+

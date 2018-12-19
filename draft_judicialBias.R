@@ -26,6 +26,7 @@ left_join(candidatesSP2012, candidatesSP2008, by = 'candidate.ssn')
 candidates.reelected2012 <- candidatesSP2012$candidate.ssn %>%
                             match(candidatesSP2008$candidate.ssn) %>%
                             subset(!is.na(.))
+
 candidates.reelected2016 <- candidatesSP2016$candidate.ssn %>%
                             match(candidatesSP2012$candidate.ssn) %>%
                             subset(!is.na(.))

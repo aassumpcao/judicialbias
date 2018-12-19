@@ -107,10 +107,15 @@ candidates %<>% mutate(candidate.male = ifelse(candidate.gender.ID != 4, 1, 0))
 candidates %<>% select(-candidate.education.ID)
 
 # wrangle candidacy expenditures
+candidates.2008 <- filter(candidates, election.year < 2012)
+candidates      <- filter(candidates, election.year > 2008)
 candidates %<>%
   mutate(exp = candidacy.expenditures) %>%
   mutate(exp = ifelse(is.na(exp) | exp == -1, mean(exp, na.rm = TRUE), exp)) %>%
   mutate(candidacy.expenditures = exp)
+
+# bind datasets
+candidates <- bind_rows(candidates, candidates.2008)
 
 # define vector for finding political occupations
 politicians <- 'VEREADOR|PREFEITO|DEPUTADO|GOVERNADOR|SENADOR|PRESIDENTE'
@@ -148,11 +153,12 @@ candidatesSP2016[candidates.reelected2016, 'candidate.experience'] <- 1
 candidates <- bind_rows(candidatesSP2012, candidatesSP2016)
 
 # create random court outcomes
+set.seed(12345)
 candidates$candidate.plaintiff <- rbinom(nrow(candidates), 1, .5)
 candidates$trial.outcome       <- rbinom(nrow(candidates), 1, .5)
 
 # remove unnecessary objects
-
+rm(list = objects(pattern = '[0-9]|politicians'))
 
 ################################################################################
 # choose variables that will be used in the analysis
@@ -202,6 +208,10 @@ stargazer(
   summary.logical = TRUE,
   summary.stat = c('n', 'mean', 'sd', 'min', 'max')
 )
+
+# educational attainment and marital status levels
+candidates %$% table(candidate.education) %>% prop.table()
+candidates %$% table(candidate.maritalstatus) %>% prop.table()
 
 ################################################################################
 # simulations
