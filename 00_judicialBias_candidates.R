@@ -17,6 +17,7 @@ library(magrittr)
 library(stargazer)
 
 # load statements
+load('../2019 Electoral Crime/candidates.2010.Rda')
 load('../2019 Electoral Crime/candidates.2012.Rda')
 load('../2019 Electoral Crime/candidates.2016.Rda')
 
@@ -39,9 +40,14 @@ calc_age <- function(birthDate, refDate = Sys.Date()) {
 
 ################################################################################
 # narrow down searchable candidates
+# filter 2008 candidates so that i know who was reelected and who wasn't
+candidates.2010 %<>% filter(COD_SIT_TOT_TURNO %in% c(1, 5)) %>%
+                     filter(ANO_ELEICAO > 2004)
+
 # join all elected candidates from 2012 and 2016 elections
 candidates <- bind_rows(candidates.2012, candidates.2016) %>%
               filter(COD_SIT_TOT_TURNO %in% 1:3) %>%
+              bind_rows(candidates.2010) %>%
               filter(SIGLA_UF == 'SP') %>%
               filter(CODIGO_CARGO != 12)
 
@@ -120,9 +126,33 @@ candidates %<>%
 # transform variable type to factor
 candidates %<>% mutate_at(vars(matches('education|maritalstatus')), factor)
 
+# filter by year to identify reelected politicians
+candidatesSP2008 <- filter(candidates, election.year == 2008)
+candidatesSP2012 <- filter(candidates, election.year == 2012)
+candidatesSP2016 <- filter(candidates, election.year == 2016)
+
+# find reelected candidates
+candidates.reelected2012 <- candidatesSP2012$candidate.ssn %>%
+                            match(candidatesSP2008$candidate.ssn) %>%
+                            subset(!is.na(.))
+
+candidates.reelected2016 <- candidatesSP2016$candidate.ssn %>%
+                            match(candidatesSP2012$candidate.ssn) %>%
+                            subset(!is.na(.))
+
+# merge reelected candidate info on final dataset
+candidatesSP2012[candidates.reelected2012, 'candidate.experience'] <- 1
+candidatesSP2016[candidates.reelected2016, 'candidate.experience'] <- 1
+
+# merge dataset
+candidates <- bind_rows(candidatesSP2012, candidatesSP2016)
+
 # create random court outcomes
 candidates$candidate.plaintiff <- rbinom(nrow(candidates), 1, .5)
 candidates$trial.outcome       <- rbinom(nrow(candidates), 1, .5)
+
+# remove unnecessary objects
+
 
 ################################################################################
 # choose variables that will be used in the analysis
