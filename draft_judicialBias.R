@@ -30,3 +30,19 @@ candidates.reelected2012 <- candidatesSP2012$candidate.ssn %>%
 candidates.reelected2016 <- candidatesSP2016$candidate.ssn %>%
                             match(candidatesSP2012$candidate.ssn) %>%
                             subset(!is.na(.))
+
+candidates2004 %>% names()
+candidates2004 %$% table(DESC_SIT_TOT_TURNO, COD_SIT_TOT_TURNO)
+
+# identify the reelected candidates in 2008.
+candidates2004 <- filter(candidates.2010, ANO_ELEICAO == 2004) %>%
+                  filter(COD_SIT_TOT_TURNO %in% c(1, 5))
+candidates2008 <- filter(candidates.2010, ANO_ELEICAO == 2008) %>%
+                  filter(COD_SIT_TOT_TURNO %in% c(1, 5))
+
+candidates2012 <- filter(candidates.2012, ANO_ELEICAO == 2012)
+candidates2016 <- filter(candidates.2016, ANO_ELEICAO == 2016)
+
+candidates2008 %$% table(DESCRICAO_SEXO, CODIGO_SEXO)
+
+candidates %$% table(candidacy.expenditures, election.year)

@@ -40,16 +40,22 @@ calc_age <- function(birthDate, refDate = Sys.Date()) {
 
 ################################################################################
 # narrow down searchable candidates
-# filter 2008 candidates so that i know who was reelected and who wasn't
-candidates.2010 %<>% filter(COD_SIT_TOT_TURNO %in% c(1, 5)) %>%
-                     filter(ANO_ELEICAO > 2004)
+# filter candidates from 2004 till 2016
 
-# join all elected candidates from 2012 and 2016 elections
-candidates <- bind_rows(candidates.2012, candidates.2016) %>%
-              filter(COD_SIT_TOT_TURNO %in% 1:3) %>%
-              bind_rows(candidates.2010) %>%
-              filter(SIGLA_UF == 'SP') %>%
-              filter(CODIGO_CARGO != 12)
+# 2004 candidates are only used to identify the reelected candidates in 2008
+candidates2004 <- filter(candidates.2010, ANO_ELEICAO == 2004) %>%
+                  filter(COD_SIT_TOT_TURNO %in% c(1, 5)) %>%
+                  filter(SIGLA_UF == 'SP') %>%
+                  filter(CODIGO_CARGO != 12)
+
+# final dataset
+candidates2008 <- filter(candidates.2010, ANO_ELEICAO == 2008) %>%
+                  filter(COD_SIT_TOT_TURNO %in% c(1, 5))
+candidates     <- bind_rows(candidates.2012, candidates.2016) %>%
+                  filter(COD_SIT_TOT_TURNO %in% 1:3) %>%
+                  bind_rows(candidates2008) %>%
+                  filter(SIGLA_UF == 'SP') %>%
+                  filter(CODIGO_CARGO != 12)
 
 # rename variables
 candidates %<>%
@@ -93,11 +99,13 @@ candidates %<>%
 # wrangle age
 candidates %<>%
   mutate(dob = lubridate::dmy(candidate.dob)) %>%
-  mutate(age = case_when(election.year == 2012 ~ calc_age(dob, '2012-10-07'),
+  mutate(age = case_when(election.year == 2008 ~ calc_age(dob, '2008-10-05'),
+                         election.year == 2012 ~ calc_age(dob, '2012-10-07'),
                          election.year == 2016 ~ calc_age(dob, '2016-10-02'))
   ) %>%
   mutate(age = ifelse(candidate.age == -1, age, candidate.age)) %>%
-  mutate(age = ifelse(age > 100, 2012 - age, age), candidate.age = age) %>%
+  mutate(age = ifelse(age > 100, 2012 - age, age)) %>%
+  mutate(age = ifelse(age < 18, 18, age), candidate.age = age) %>%
   select(-age, -dob)
 
 # wrangle gender
@@ -107,15 +115,10 @@ candidates %<>% mutate(candidate.male = ifelse(candidate.gender.ID != 4, 1, 0))
 candidates %<>% select(-candidate.education.ID)
 
 # wrangle candidacy expenditures
-candidates.2008 <- filter(candidates, election.year < 2012)
-candidates      <- filter(candidates, election.year > 2008)
 candidates %<>%
   mutate(exp = candidacy.expenditures) %>%
   mutate(exp = ifelse(is.na(exp) | exp == -1, mean(exp, na.rm = TRUE), exp)) %>%
   mutate(candidacy.expenditures = exp)
-
-# bind datasets
-candidates <- bind_rows(candidates, candidates.2008)
 
 # define vector for finding political occupations
 politicians <- 'VEREADOR|PREFEITO|DEPUTADO|GOVERNADOR|SENADOR|PRESIDENTE'
@@ -137,20 +140,25 @@ candidatesSP2012 <- filter(candidates, election.year == 2012)
 candidatesSP2016 <- filter(candidates, election.year == 2016)
 
 # find reelected candidates
-candidates.reelected2012 <- candidatesSP2012$candidate.ssn %>%
+candidates.reelected2008 <- candidates2004$CPF_CANDIDATO %>%
                             match(candidatesSP2008$candidate.ssn) %>%
                             subset(!is.na(.))
 
-candidates.reelected2016 <- candidatesSP2016$candidate.ssn %>%
+candidates.reelected2012 <- candidatesSP2008$candidate.ssn %>%
                             match(candidatesSP2012$candidate.ssn) %>%
                             subset(!is.na(.))
 
+candidates.reelected2016 <- candidatesSP2012$candidate.ssn %>%
+                            match(candidatesSP2016$candidate.ssn) %>%
+                            subset(!is.na(.))
+
 # merge reelected candidate info on final dataset
+candidatesSP2008[candidates.reelected2008, 'candidate.experience'] <- 1
 candidatesSP2012[candidates.reelected2012, 'candidate.experience'] <- 1
 candidatesSP2016[candidates.reelected2016, 'candidate.experience'] <- 1
 
 # merge dataset
-candidates <- bind_rows(candidatesSP2012, candidatesSP2016)
+candidates <- bind_rows(candidatesSP2008, candidatesSP2012, candidatesSP2016)
 
 # create random court outcomes
 set.seed(12345)

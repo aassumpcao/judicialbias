@@ -1,6 +1,7 @@
 \documentclass[11pt]{article}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage{bbm}
 \usepackage{centernot}
 \usepackage{amsfonts}
 \usepackage{eurosym}
@@ -59,7 +60,7 @@
 \begin{document}
 
 \begin{titlepage}
-\title{Judicial Favoritism of Politicians: Evidence from Small Court Claims}
+\title{Judicial Favoritism of Politicians: Evidence from Small Claim Courts}
 \author{Andre Assumpcao\thanks{PhD Student, Department of Public Policy, The University of North Carolina at Chapel Hill. Contact details: \href{mailto:aassumpcao@unc.edu}{\textcolor{blue}{aassumpcao@unc.edu}}}}
 \date{December 21, 2018}
 
@@ -95,9 +96,9 @@ Isolating the effect of judicial favoritism on court outcomes is not easy. Court
 
 In recent years, however, there has been growing interest in the relationship between judicial decisions and politics. Using data on employment claims filed in Venezuela between 2006 and 2017, \citet{Sanchez-MartinezDismantlingInstitutionsCourt2018} looks at whether defendant employers are more likely to see a favorable outcome when they are affiliated with the United Socialist Party of Venezuela (PSUV), in power since 2007. The author finds that employers who share the same party affiliation as judges are 20 percent more successful at trial. In \citet{LambaisJudicialSubversionEvidence2018}, the authors identify a 50 percentage point advantage in the win rate at court for elected versus non-elected candidates when both are defendants in corruption cases filed only after election day has passed. This project supplements the recent literature by investigating whether favoritism persists in cases where judges and politicians have less at stake (e.g.~small claim cases), testing a theory of personal ties across members of each branch of government.
 
-Besides the theoretical component, this paper makes a series of data analyses contributions to the literature in law and politics. In order to measure the effect of political bias, I scrape and code judicial decisions in the São Paulo State Court System (Brazil) for all elected mayors and city councilors since 2012. I then apply the methodology in \citet{AbramsJudgesVaryTheir2012} to evaluate whether politicians have an upper hand in small claims cases. I construct a random distribution of court outcomes against which I compare the observed outcomes in the data scraped from the web. Finally, I employ text analysis to extract additional information from judicial decisions and construct supervised machine learning (ML) predictions of court outcomes based on case and politician characteristics for the entire distribution of elected politicians in the State of São Paulo between 2008 and 2018. The web scraper, the simulations, and the ML algorithms are made available as free software for researchers conducting similar research projects using judiciary data in other countries.
+Besides the theoretical component, this paper makes a series of data analyses contributions to the literature in law and politics. In order to measure the effect of political bias, I scrape and code judicial decisions in the São Paulo State Court System (Brazil) for all elected mayors and city councilors since 2008. I then apply the methodology in \citet{AbramsJudgesVaryTheir2012} to evaluate whether politicians have an upper hand in small claims cases. I construct a random distribution of court outcomes against which I compare the observed outcomes in the data scraped from the web. Finally, I employ text analysis to extract additional information from judicial decisions and construct supervised machine learning (ML) predictions of court outcomes based on case and politician characteristics for the entire distribution of elected politicians in the State of São Paulo between 2008 and 2018. The web scraper, the simulations, and the ML algorithms are made available as free software for researchers conducting similar research projects using judiciary data in other countries.
 
-The remainder of this paper is as follows. Section \ref{sec:background_paper2} presents the institutional environment of Brazil's State Court System. Section \ref{sec:data_paper2} summarizes the test dataset used for analysis; section \ref{sec:methods_paper2} discusses the analytical strategy and, finally, section \ref{sec:conclusion_paper2} lays out the necessary steps for completion of this project.
+The remainder of this paper is as follows. Section \ref{sec:background_paper2} presents the institutional environment of Brazil's State Court System. Section \ref{sec:data_paper2} summarizes the test dataset used for analysis; theoretical framework is presented in section \ref{sec:theory_paper2}; section \ref{sec:methods_paper2} discusses the analytical strategy and, finally, section \ref{sec:conclusion_paper2} lays out the necessary steps for completion of this project.
 
 \section{Institutional Background} \label{sec:background_paper2}
 
@@ -111,13 +112,31 @@ SCT structure greatly reduces the number of dimensions driving judicial decision
 
 \section{Data} \label{sec:data_paper2}
 
-The data come from two sources. First, I use information on candidates running for municipal office in the State of São Paulo in 2012 and 2016 from the Brazilian Electoral Court (TSE). TSE has jurisdiction over the entire electoral process in Brazil, from registering candidates, ruling over breach of electoral law, and overseeing the voting process on election day, to counting votes and authorizing that elected politicians take up office. Though TSE is a permanent court, the busiest period in the electoral process occurs between August and December every two years, and politicians begin mandates on Jan 1\textsuperscript{st}.
+The data come from two sources. First, I use information on candidates running for municipal office in the State of São Paulo in 2008, 2012, and 2016 from the Brazilian Electoral Court (TSE). TSE has jurisdiction over the entire electoral process in Brazil, from registering candidates, ruling over breach of electoral law, and overseeing the voting process on election day, to counting votes and authorizing that elected politicians take up office. Though TSE is a permanent court, the busiest period in the electoral process occurs between August and December every two years, and politicians begin mandates on Jan 1\textsuperscript{st}.
 
-TSE produces a comprehensive compilation of electoral data every cycle. It collects individual-level data on politicians and publishes results by election section, which is the actual physical building where electronic voting machines are arranged on election day (there is no early neither mail-in voting in Brazil). I use electoral results, candidate information, and the electoral district in which every candidate in the State of São Paulo registered for the 2012 and 2016 elections. Table \ref{tab:sumstats} contains a sample of the variables for all candidates in the state.
+TSE produces a comprehensive compilation of electoral data every cycle. It collects individual-level data on politicians and publishes results by election section, which is the actual physical building where electronic voting machines are arranged on election day (there is no early neither mail-in voting in Brazil). I use electoral results, candidate information, and the electoral district in which every candidate in the State of São Paulo registered for the 2008, 2012, and 2016 elections. Table \ref{tab:sumstats} contains a sample of the variables for the universe of candidates in the state.
 
 \input{tab_sumstats}
 
-The average age for candidates in the state is 45 years-old, 88 percent of all candidates are male and 46.1 percent have previous political experience, measured as an indicator variable for candidates who have been reelected or have declared their occupation in the TSE form as politician of any kind (city councilor, mayor, governor, member of congress, senator, president). I have also collected categorical variables for educational attainment and marital status for all elected officials but they are omitted from the table. The most frequent educational level and marital status are four-year college degree or equivalent (37.2 percent) and married (70.1 percent)
+The average age for candidates in the state is 45 years old, 88.5 percent of all candidates are male and 38.8 percent have previous political experience, measured as an indicator variable for candidates who have been reelected or have declared their occupation in the TSE form as politician of any kind (city councilor, mayor, governor, member of congress, senator, president). I have also collected categorical variables for educational attainment and marital status for all elected officials but they are omitted from the table. The most frequent educational level and marital status are four-year college degree or equivalent (36 percent) and married (70.9 percent), respectively.
+
+In the full version of this paper, I search for SCT cases involving these elected politicians in the database of public judicial decisions maintained by the São Paulo State Court (TJ-SP). TJ-SP publishes all judicial decisions since 2008 on their website. The available information are the case date, type (breach of contract, debt execution, and others above), court where it has been filed, ruling judge, amount claimed, litigants and their lawyers (if hired), sentences, and every other case movement through the system. Using these documents, I can recover a rich set of information for each court case involving a politician and pinpoint potential factors driving a judge's decision.
+
+Stepwise data collection is as follows. First, I use a politician's name to find the ongoing court cases they are involved. Second, I filter case hits down to SCT-only hits. Next, I scrape case numbers, which are individual identifiers for every single court case in Brazil.\footnote{The National Council of Justice, the main judicial oversight body, passed legislation in 2006 and fully enacted in 2008, establishing a 20-digit individual identifier for all court cases in Brazil.} The case numbers are a more stable search criterion than name. Finally, I use the numbers to download all other case information. Though this process seems overwhelming, I have already started writing the programs necessary for scraping the TJ-SP website. In fact, a research collaborator in the Brazilian Association of Jurimetrics has functioning web scrapers written in R which download case data using different search criteria (case number and type, litigant name, court type and location, and so on). I am just translating the R code into Python for more speed and functionality.
+
+\section{Theoretical Framework} \label{sec:theory_paper2}
+
+Suppose there are three representative agents, one for each branch of government: the executive, the legislative, and the judiciary agents. These agents are independent and yield power in different ways but, fundamentally, under different term-limits. The executive agent serves on a time-limited mandate, averaging four to six years in most Western democracies. In some countries, they can run for office for a second term and, when elected, serve for double the original time. Their power is concentrated in those years and they have great discretion over resources and policy implementation. The legislative agent is not generally term-limited, with mandates averaging two to six years, and they have control over certain resources conditional on the type of representation in each electoral system: winner-takes-all has more discretion than proportional representation (\emph{pork barrel} being the exemplary case). Finally, the judiciary agent generally serves on a life-long mandate and yields power in restrictive but steady ways. They have jurisdiction over the issues that are brought to their courts, mostly over concrete, well-defined cases, and only control the resources necessary to the administration of courts.
+
+In this set-up, these three agents would maximize their utility over different time horizons. Executive and legislative agents compute individual welfare for up to the consecutive mandates; the judiciary agent computes welfare in perpetuity. Both discount future utility at a constant time-discount factor which is equal to all agents (for simplicity purposes). I can then state their utility functions as follows:
+
+\begin{equation} \label{eq:eq1}
+  \begin{split}
+    % u_{exec} = & \sum_{x = 1}^{k} x_{k,\, t = 1} + \mathbbm{1}_r \times \sum_{x = 1}^{k} x_{k, \, t = 2} \\
+    % u_{legis}= & \sum_{x = 1}^{k} x_{k,\, t = 1} + \mathbbm{1}_r \times \sum_{x = 1}^{k} x_{k, \, t = 2} \\
+    u_{jud}  = &
+  \end{split}
+\end{equation}
 
 \section{Analytical Strategy} \label{sec:methods_paper2}
 
