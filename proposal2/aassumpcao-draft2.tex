@@ -128,13 +128,13 @@ Stepwise data collection is as follows. First, I use a politician's name to find
 
 Suppose there are three representative agents, one for each branch of government: the executive, the legislative, and the judiciary agents. These agents are independent and yield power in different ways but, fundamentally, under different term-limits. The executive agent serves on a time-limited mandate, averaging four to six years in most Western democracies. In some countries, they can run for office for a second term and, when elected, serve for double the original time. Their power is concentrated in those years and they have great discretion over resources and policy implementation. The legislative agent is not generally term-limited, with mandates averaging two to six years, and they have control over certain resources conditional on the type of representation in each electoral system: winner-takes-all has more discretion than proportional representation (\emph{pork barrel} being the exemplary case). Finally, the judiciary agent generally serves on a life-long mandate and yields power in restrictive but steady ways. They have jurisdiction over the issues that are brought to their courts, mostly over concrete, well-defined cases, and only control the resources necessary to the administration of courts.
 
-In this set-up, these three agents would maximize their utility over different time horizons. Executive and legislative agents compute individual welfare for up to the consecutive mandates; the judiciary agent computes welfare in perpetuity. Both discount future utility at a constant time-discount factor which is equal to all agents (for simplicity purposes). I can then state their utility functions as follows:
+In this set-up, these three agents would maximize their utility over different time horizons. The executive agent computes individual welfare for up to two consecutive mandates, the legislative agent does so for as many mandates to which as they are elected, and the judiciary agent calculates welfare in perpetuity. All three discount future utility at the same constant rate (for simplicity purposes). I can then state their utility functions as follows:
 
 \begin{equation} \label{eq:eq1}
   \begin{split}
-    % u_{exec} = & \sum_{x = 1}^{k} x_{k,\, t = 1} + \mathbbm{1}_r \times \sum_{x = 1}^{k} x_{k, \, t = 2} \\
-    % u_{legis}= & \sum_{x = 1}^{k} x_{k,\, t = 1} + \mathbbm{1}_r \times \sum_{x = 1}^{k} x_{k, \, t = 2} \\
-    u_{jud}  = &
+    u_{exec} = & \sum_{x = 1}^{k} x_{k,\, t = 1} + (\mathbbm{1}_r) \times \sum_{x = 1}^{k} x_{k, \, t = 2} \times \frac{1}{(1 + r)} \\
+    u_{legis}= & \sum_{x = 1}^{k} x_{k,\, t = 1} + \sum_{t = 2}^{t}(\mathbbm{1}_r \times \sum_{x = 1}^{k} x_{k, \, t} \times \frac{1}{(1 + r)^{t}}) \\
+    u_{jud}  = & \sum_{x = 1}^{k} x_{k,\, t = 1} + \sum_{t = 2}^{t} \sum_{x = 1}^{k} x_{k, \, t} \times \frac{1}{(1 + r)^{t}} \\
   \end{split}
 \end{equation}
 
