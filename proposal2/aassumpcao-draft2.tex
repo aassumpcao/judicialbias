@@ -128,38 +128,59 @@ Stepwise data collection is as follows. First, I use a politician's name to find
 
 Suppose there are three representative agents in Brazil, one for each branch of government: the executive, the legislative, and the judiciary. Though these agents are independent, they interact with one another over time. The executive agent serves on up to two four-year mandates (pending reelection at the end of first term). They control the majority of government budgets and have the discretion to set wages and resources allocated to the other branches. The legislative agent serves on a four-year mandate,\footnote{Senators serve for eight years but this does not change the theoretical predictions in this section.} which is renewable as many times as they are reelected; they have no term limit. They are responsible for passing law and determining budget levels but not its composition. The judiciary agent serves on life-long mandates and yields power in restrictive but steady ways. They have limited control over resources as they only oversee budgets in the courts at which they serve, but resolve disputes between the other two branches of government and other economic agents (individuals, companies, etc). In this simplified model, the judiciary pleases or upsets the executive and legislative by settling their disputes.
 
-I am interested in the behavior of the judiciary with respect to other branches of government. The representative agent derives utility in each period $t$ according to equation \refp{eq:u_jud}, which describes the benefit $f$ as a function of $k$ observable characteristics $\sum_{x = 1}^{k}x_{k}$, such as their time in post, their wages, their working conditions, and unobservable characteristics $\varepsilon$ such as reputation and their happiness in serving justice; costs $c$ are a function of $m_{t}$ working conditions, executive and legislative utilities $u_{e}^{-1}, u_{l}^{-1}$, and $\delta_{t}$ are exogenous, stochastic shocks that impact their work. These per-period utilities are computed in perpetuity in accordance with judge's mandates: \\
+I am interested in the behavior of the judiciary with respect to other branches of government. The representative agent derives utility in each period $t$ according to equation \refp{eq:u_jud}, which describes the benefit $f$ as a function of $k$ observable characteristics $\sum_{x = 1}^{k}x_{k}$, such as their time in post, their wages, their working conditions, and unobservable characteristics $\varepsilon$ such as reputation and their happiness in serving justice; costs $c$ are a function of $m_{t}$ working conditions, executive and legislative utilities $u_{e}^{t}, u_{l}^{t}$, and $\delta_{t}$ are exogenous, stochastic shocks that impact their work. These per-period utilities are computed in perpetuity in accordance with judge's mandates: \\
 
 \begin{equation} \label{eq:u_jud}
-  u_{\text{j}}^{t} = \frac{1}{r} \times \sum_{t = 1}^{t} \Bigg[ f\Big(\sum_{x = 1}^{k}x_{k}, \ \varepsilon_{t} \Big) - c\Big(\sum_{m = 1}^{k} m_{t}, \ u_{\text{e}}, \ u_{\text{l}}, \ \delta_{t}\Big) \Bigg]
+  u_{\text{j}}^{t} = \frac{1}{r} \times \sum_{t = 1}^{t} \Bigg[ f\Big(\sum_{x = 1}^{k}x_{k}, \ \varepsilon_{t} \Big) - c\Big(\sum_{m = 1}^{k} m_{t}, \ u_{e}^{t}(p), \ u_{l}^{t}(p), \ \delta_{t}\Big) \Bigg]
 \end{equation} \\
 
-Since the executive and the legislative agents have primary responsibility over government budget, we can thus expect the judiciary to strategically maximize future net benefits by pleasing other agents and thus reducing costs. Indeed, this incentive is particularly strong in low-salience cases, such as those filed in small claim courts. First, the penalties are limited to a small monetary amount privately held by the defendant. A ruling in SCT does not impact government budget (as it would if it were a corruption case in which the funds might be returned). In addition, these cases are not likely to cause any significant political damage, as they do not imply any government wrongdoing. Most defendant politicians are brought to court under tort allegations and these are perceived as natural in the political process, such that convictions have a weaker informational effect compared to other crimes (again, corruption). To that end, the judiciary agent manipulates the probability the hand out court outcomes involving members of the executive or the legislative branches. Equation \refp{eq:u_jud2} summarizes these relationship between utilities, costs, and the probability of having a favorable court outcome in SCT. \\
+Since the executive and the legislative agents have primary responsibility over government budget, we can thus expect the judiciary to strategically maximize future net benefits by pleasing other agents and thus reducing costs. Indeed, this incentive is particularly strong in low-salience cases, such as those filed in small claim courts. First, the penalties are limited to a small monetary amount privately held by the defendant. A ruling in SCT does not impact government budget (as it would if it were a corruption case in which the funds might be returned). In addition, these cases are not likely to cause any significant political damage, as they do not imply any government wrongdoing. Most defendant politicians are brought to court under tort allegations and these are perceived as natural in the political process, such that convictions have a weaker informational effect compared to other crimes (again, corruption). To that end, the judiciary agent manipulates the probability they hand out court outcomes involving members of the executive or the legislative branches, summarized by $p$ in their utilities. An increase in the probability of a favorable outcome increases the per-period utility of executive and legislative agents, reducing the cost for the judiciary. This relationship is summarized in equation \refp{eq:u_jud2} below: \\
 
-\begin{align} \label{eq:u_jud2}
-& \cfrac{\partial u_{j}}{\partial c} < 0 \\[10pt]
-& \cfrac{\partial c}{\partial u_{e}} < 0 \ \text{and} \ \cfrac{\partial c}{\partial u_{l}} < 0 \\[10pt]
-& \cfrac{\partial u_{e}}{\partial p} < 0 \ \text{and} \ \cfrac{\partial u_{l}}{\partial p} < 0 \\[10pt]
-\end{align}
+\begin{equation} \label{eq:u_jud2}
+  \cfrac{\partial u_{j}^{t}}{\partial p} = \cfrac{\partial u_{j}^{t}}{\partial c} \cdot \cfrac{\partial c}{\partial u_{e, \, l}^{t}} \cdot \cfrac{\partial u_{e, \, l}^{t}}{\partial p} > 0
+\end{equation} \\
 
+By manipulating $p$, the judiciary agent is minimizing cost and maximizing the net (per-period) benefit of holding office. In the absence of the politician bias, equation \refp{eq:u_jud} would not be conditional on the utilities of the executive and the legislative agents such that $\cfrac{\partial c}{\partial u_{e, \, l}^{t}} \cdot \cfrac{\partial u_{e, \, l}^{t}}{\partial p} = 0$ and, consequently, $\cfrac{\partial u_{j}^{t}}{\partial p} = 0$ in equation \refp{eq:u_jud2}.
+
+\section{Empirical Strategy} \label{sec:methods_paper2}
+
+This paper has two goals. First, I want to test the existence of judicial bias in favor of politicians when a case is presented to judges in SCT, the small claim court in Brazil. Second, I want to predict the court outcome for the entire distribution of politicians in the state of São Paulo, even if they have not been involved in SCT cases. These are two relevant empirical exercises for any country aiming at improvement its \emph{de facto} separation of power.
+
+\subsection{Judicial Favoritism} \label{subsec:methods1_paper2}
+
+For the judicial favoritism exercise, I build on the methodology put forward by \citet{AbramsJudgesVaryTheir2012}, who analyze racial bias in felony cases sentencing across judges in Cook County, IL. The authors suggest a two-step process to measure sentencing bias, which is analogous to outcome bias in this project: (i) confirm random assignment of cases, such that outcomes are comparable across judges and not due to any excessive harshness or leniency uncorrelated with plaintiffs or defendants condition as politicians; (ii) test whether any heterogeneity in case outcomes involving politicians are not due to sampling variability driven by other factors (case merits, court conditions, time in which case was tried) or random variability. \citet{AbramsJudgesVaryTheir2012} suggests that random assignment can be tested regressing a case characteristic (gender) on multiple control variables, as bellow: \\
+
+\begin{equation} \label{eq:methods1}
+  \text{Female}_{ijc} = \alpha + \sum_{k=1}^{k} \beta x_{kijc} + \sum_{n=1}^{n} \Gamma D_{n} + \sum_{c=1}^{c} \lambda_{c} + \varepsilon_{ijc}
+\end{equation} \\
+
+Where Female$_{ijc}$ is a female binary indicator for the plaintiff's gender, $x_{k}$ are control variables, $D_{n}$ is a matrix of judge fixed-effects, $\lambda_{c}$ is a matrix of court fixed-effects, and subscripts $i$, $j$, $c$ are indexing plaintiff $i$, judge $j$, and court $c$. Under random assignment, the \emph{F}-test on the joint distribution of judge fixed-effects should fail to reject the null (i.e.~fixed-effects are equal). The bias would follow from a similar specification where the dependent variable is the favorable outcome for politicians:
 
 \begin{equation}
-\begin{split} \label{eq:eq_jud2}
-  u_{\text{jud}} = & \sum_{t = 1}^{t} \Bigg[ u_{t}\Big(\sum_{x = 1}^{k} x_{k, \, t}, u_{\text{exec}}, u_{\text{legis}}\Big) \times \frac{1}{(1+r)^{t-1}} \Bigg] \\[10pt]
-  \frac{\partial u_{\text{jud}}}{\partial u_{\text{exec}} \partial u_{\text{legis}}} = & \ 0 \\[10pt]
-  ... \\[10pt]
-  \frac{\partial u_{\text{jud}}}{\partial u_{\text{exec}} \partial u_{\text{legis}}} = & \frac{1}{r} \times \sum_{t = 1}^{t} \Bigg[\frac{\partial u_{t}}{\partial u_{\text{exec}}} \times u_{\text{exec}}' + \frac{\partial u_{t}}{\partial u_{\text{legis}}} \times u_{\text{legis}}' \Bigg] = 0
-\end{split}
+  \begin{split} \label{eq:methods2}
+    \text{Pro-Politician}_{ijc} = \alpha & + \sum_{k=1}^{k} \beta x_{kijc} + \text{Politician}_{ijc} + \sum_{n=1}^{n} \Gamma D_{n} \\
+    & + \sum_{n=1}^{n} \Gamma D_{n} \cdot \text{Politician}_{ijc} + \sum_{c=1}^{c} \lambda_{c} + \varepsilon_{ijc}
+  \end{split}
 \end{equation} \\
 
-The judiciary maximizes
+Politician is an indicator variable for plaintiffs who happen to be holding elected office at the time their case is ruled at court $c$. A second \emph{F}-test on the interactions between judge-fixed effects and politician plaintiffs is a test on judicial bias. This design suffers from the same problems as \citet{AbramsJudgesVaryTheir2012}, i.e.~the overrejection of the null in the \emph{F}-test for two reasons: (i) since the number of judges per court is relatively small to number of judges across all sample, either test suffers from finite-sample bias (the judge variability within courts is small); (ii) the conventional \emph{F}-statistic will overreject the null when errors are not normally distributed, as is the case with a binary outcome such as the pro-politician ruling in this project.
 
+The solution to the overrejection problem is the construction of simulated datasets where assignment of cases is indeed random. The process is as follows. First, the researcher should group the actual (empirical) sample into the randomization units, which are the many state SCTs. Within these units, the researcher creates simulated observations, for each judge, from random draws (with replacement) of each of the variables in the empirical sample unit. Suppose there are 20 observed cases heard by four judges (five cases each) in a given SCT in the state of São Paulo. Each case has a set of observed characteristics, e.g.~plaintiff gender, whether plaintiff was a politician at the time the case was heard, claim amount, etc. The researcher then creates 20 simulated cases, five per judge (keeping the same proportion as in the original data), where each case characteristic is randomly drawn from the sample of 20 observed cases in the empirical dataset. Once this process is replicated for all randomization units (SCTs), a simulated dataset of the same size as the empirical dataset has been created. This process is then repeated so that there are 1,000 simulated datasets.
 
+Armed with these datasets, the researcher can now compare the statistical moments of the actual, observed distribution against the simulation without fearing the overrejection of the nulls. \citet{AbramsJudgesVaryTheir2012} compute the 25-75 percent interquartile range (IQR) for each variable in each simulation to create a random distribution of sentencing against which they compare the empirical IQR. For the case of random assignment, in which control variables should be used, the expected outcome of is that the empirical IQR will be indistinguishable from the simulated IQR distribution, thus failing to reject the \emph{F}-test on equality of judge fixed-effects. For the court outcome case, the expected outcomes is that the empirical IQR is statistically different than the simulated IQR distribution and thus the \emph{F-}test would reject the equality of judge fixed-effects by plaintiff's politician characteristic.
 
+\subsection{Court Outcome Prediction} \label{subsec:methods2_paper2}
 
-\section{Analytical Strategy} \label{sec:methods_paper2}
+(TBU).
 
 \section{Further Development} \label{sec:conclusion_paper2}
+
+This paper investigates whether there is differential treatment of politicians in small claim courts in the state of São Paulo, Brazil. To my knowledge, it is the first paper to produce clear evidence on judicial bias in favor of politicians. Similar studies in the literature measure bias in high-salience cases in which there is a clear upside for the judiciary if it favors agents from other branches of government. These initiative are supplemental to each other.
+
+Besides the evidence of judicial favoritism of politicians, this project also makes predictions about the potential court outcomes if more politicians were taken to court. Though I only focus on a small set of cases, those filed in São Paulo's special civil tribunals (SCTs), the predictions should serve as a benchmark for the deviations between an \emph{de facto} and a \emph{de jure} independent judiciary. There are clear policy improvements discussed in the political economy literature when the judiciary branch is independent and able to check the power of the executive and the legislative (CITATION).
+
+The longest task in this paper is data collection. As discussed in section \ref{sec:data_paper2}, I have a clear roadmap of the next steps necessary for the completion of this project. I will write the web scraping scripts based on existing programs and extract case information once court documents are downloaded. Therefore, this project is feasible within the timeline necessary for completion of the dissertation project.
+
 
 \clearpage
 

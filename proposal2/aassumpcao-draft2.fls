@@ -308,6 +308,7 @@ INPUT /usr/local/texlive/2018/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam1
 INPUT /usr/local/texlive/2018/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
 INPUT tab_sumstats.tex
 INPUT tab_sumstats.tex
+INPUT /usr/local/texlive/2018/texmf-dist/fonts/tfm/public/cm/cmbx12.tfm
 INPUT aassumpcao-draft2.bbl
 INPUT aassumpcao-draft2.bbl
 INPUT aassumpcao-draft2.aux
