@@ -1,12 +1,12 @@
 # Fdb version 3
-["bibtex aassumpcao-draft2"] 1545496513 "aassumpcao-draft2.aux" "aassumpcao-draft2.bbl" "aassumpcao-draft2" 1545497465
+["bibtex aassumpcao-draft2"] 1545496513 "aassumpcao-draft2.aux" "aassumpcao-draft2.bbl" "aassumpcao-draft2" 1545580100
   "/Users/aassumpcao/library.bib" 1545258518 490212 ad1aef7e63f6e0001dd8a4f28be7022e ""
   "/usr/local/texlive/2018/texmf-dist/bibtex/bst/base/apalike.bst" 1480098433 24635 604dafcc79f521a11ea73e506e1fbd98 ""
-  "aassumpcao-draft2.aux" 1545497464 3960 c9d80afa95762d71f043b89d07d02ea7 ""
+  "aassumpcao-draft2.aux" 1545580093 3960 c9d80afa95762d71f043b89d07d02ea7 ""
   (generated)
-  "aassumpcao-draft2.bbl"
   "aassumpcao-draft2.blg"
-["pdflatex"] 1545497464 "aassumpcao-draft2.tex" "aassumpcao-draft2.pdf" "aassumpcao-draft2" 1545497465
+  "aassumpcao-draft2.bbl"
+["pdflatex"] 1545580092 "aassumpcao-draft2.tex" "aassumpcao-draft2.pdf" "aassumpcao-draft2" 1545580100
   "/usr/local/texlive/2018/texmf-dist/fonts/map/fontname/texfonts.map" 1511824771 3332 103109f5612ad95229751940c61aada0 ""
   "/usr/local/texlive/2018/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1480098698 1004 54797486969f23fa377b128694d548df ""
   "/usr/local/texlive/2018/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1480098698 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -198,13 +198,13 @@
   "/usr/local/texlive/2018/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1528426230 2849778 d20fd0a0d92d412ec9b4143de20d68a5 ""
   "/usr/local/texlive/2018/texmf-var/web2c/pdftex/pdflatex.fmt" 1528423583 4220582 296642f53d93cdbc02373533d0f42b0a ""
   "/usr/local/texlive/2018/texmf.cnf" 1523934483 577 0b39adfd7c93507ff20c9c14c2f1a33f ""
-  "aassumpcao-draft2.aux" 1545497464 3960 c9d80afa95762d71f043b89d07d02ea7 ""
+  "aassumpcao-draft2.aux" 1545580093 3960 c9d80afa95762d71f043b89d07d02ea7 ""
   "aassumpcao-draft2.bbl" 1545496514 2278 c6c33f3515c4f970a6ccbc7c34df98c9 "bibtex aassumpcao-draft2"
-  "aassumpcao-draft2.out" 1545497464 1098 fcf1ec2620cad6c61734c95d1fe1b519 ""
-  "aassumpcao-draft2.tex" 1545497464 27957 1ca18c821ce3f088ddb456ccf63d4416 ""
+  "aassumpcao-draft2.out" 1545580093 1098 fcf1ec2620cad6c61734c95d1fe1b519 ""
+  "aassumpcao-draft2.tex" 1545580092 28227 406d43a8a1cc67974edca9e709a766d1 ""
   "tab_sumstats.tex" 1545242355 859 d7d62408888b27ca058b67b664aca19d ""
   (generated)
   "aassumpcao-draft2.out"
+  "aassumpcao-draft2.pdf"
   "aassumpcao-draft2.aux"
   "aassumpcao-draft2.log"
-  "aassumpcao-draft2.pdf"
