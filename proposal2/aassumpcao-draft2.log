@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2018.6.7)  23 DEC 2018 10:48
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2018.6.7)  23 DEC 2018 12:29
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -965,17 +965,17 @@ Underfull \hbox (badness 10000) in paragraph at lines 151--152
 
  []
 
-
+[6]
 Underfull \hbox (badness 10000) in paragraph at lines 155--156
 
  []
 
-[6]
+
 Underfull \hbox (badness 10000) in paragraph at lines 164--165
 
  []
 
-[7] [8] (./aassumpcao-draft2.bbl) [9
+[7] [8] [9] (./aassumpcao-draft2.bbl) [10
 
 ]
 Package atveryend Info: Empty hook `BeforeClearDocument' on input line 191.
@@ -988,13 +988,13 @@ Package rerunfilecheck Info: File `aassumpcao-draft2.out' has not changed.
 Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 191.
  ) 
 Here is how much of TeX's memory you used:
- 23224 strings out of 492646
- 400030 string characters out of 6129564
- 480008 words of memory out of 5000000
- 26658 multiletter control sequences out of 15000+600000
+ 23230 strings out of 492646
+ 400193 string characters out of 6129564
+ 480040 words of memory out of 5000000
+ 26661 multiletter control sequences out of 15000+600000
  13994 words of font info for 54 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 55i,17n,54p,1745b,357s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 55i,17n,54p,1746b,357s stack positions out of 5000i,500n,10000p,200000b,80000s
 </usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb
 ></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb>
 </usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb><
@@ -1010,10 +1010,10 @@ ive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/local/texlive
 2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/local/texlive/20
 18/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/local/texlive/2018
 /texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb>
-Output written on aassumpcao-draft2.pdf (10 pages, 213544 bytes).
+Output written on aassumpcao-draft2.pdf (11 pages, 218918 bytes).
 PDF statistics:
- 226 PDF objects out of 1000 (max. 8388607)
- 197 compressed objects within 2 object streams
- 37 named destinations out of 1000 (max. 500000)
+ 240 PDF objects out of 1000 (max. 8388607)
+ 209 compressed objects within 3 object streams
+ 40 named destinations out of 1000 (max. 500000)
  77 words of extra memory for PDF output out of 10000 (max. 10000000)
 
