@@ -3,44 +3,44 @@ Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
 The top-level auxiliary file: aassumpcao-draft2.aux
 The style file: apalike.bst
 Database file #1: /Users/aassumpcao/library.bib
-You've used 9 entries,
+You've used 11 entries,
             1935 wiz_defined-function locations,
-            540 strings with 5901 characters,
-and the built_in function-call counts, 3690 in all, are:
-= -- 361
-> -- 139
-< -- 7
-+ -- 46
-- -- 44
-* -- 321
-:= -- 638
-add.period$ -- 28
-call.type$ -- 9
-change.case$ -- 66
-chr.to.int$ -- 9
-cite$ -- 9
-duplicate$ -- 137
-empty$ -- 265
-format.name$ -- 61
-if$ -- 736
+            556 strings with 6307 characters,
+and the built_in function-call counts, 4384 in all, are:
+= -- 424
+> -- 164
+< -- 9
++ -- 55
+- -- 51
+* -- 375
+:= -- 765
+add.period$ -- 35
+call.type$ -- 11
+change.case$ -- 78
+chr.to.int$ -- 11
+cite$ -- 11
+duplicate$ -- 169
+empty$ -- 323
+format.name$ -- 70
+if$ -- 874
 int.to.chr$ -- 1
 int.to.str$ -- 0
-missing$ -- 7
-newline$ -- 48
-num.names$ -- 29
-pop$ -- 51
+missing$ -- 9
+newline$ -- 58
+num.names$ -- 37
+pop$ -- 62
 preamble$ -- 1
-purify$ -- 66
+purify$ -- 78
 quote$ -- 0
-skip$ -- 108
+skip$ -- 128
 stack$ -- 0
-substring$ -- 278
-swap$ -- 21
+substring$ -- 313
+swap$ -- 23
 text.length$ -- 2
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 54
+type$ -- 66
 warning$ -- 0
-while$ -- 27
+while$ -- 33
 width$ -- 0
-write$ -- 121
+write$ -- 148

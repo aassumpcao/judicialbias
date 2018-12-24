@@ -5,6 +5,18 @@ Abrams, D.~S., Bertrand, M., and Mullainathan, S. (2012).
 \newblock Do {{Judges Vary}} in {{Their Treatment}} of {{Race}}?
 \newblock {\em The Journal of Legal Studies}, 41(2):347--383.
 
+\bibitem[Athey, 2017]{AtheypredictionUsingbig2017}
+Athey, S. (2017).
+\newblock Beyond prediction: {{Using}} big data for policy problems.
+\newblock {\em Science}, 355(6324):483.
+
+\bibitem[Athey, 2019]{AtheyImpactMachineLearning2019}
+Athey, S. (2019).
+\newblock The {{Impact}} of {{Machine Learning}} on {{Economics}}.
+\newblock In Agrawal, A., Gans, J., and Goldfarb, A., editors, {\em The
+  {{Economics}} of {{Artificial Intelligence}}: {{AN Agenda}}}. {University of
+  Chicago Press}, Chicago.
+
 \bibitem[Baland et~al., 2010]{BalandChapter69Governance2010}
 Baland, J.-M., Moene, K.~O., and Robinson, J.~A. (2010).
 \newblock Chapter 69 - {{Governance}} and {{Development}}.
