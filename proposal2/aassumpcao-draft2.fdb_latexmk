@@ -1,12 +1,12 @@
 # Fdb version 3
-["bibtex aassumpcao-draft2"] 1545665763 "aassumpcao-draft2.aux" "aassumpcao-draft2.bbl" "aassumpcao-draft2" 1545665811
-  "/Users/aassumpcao/library.bib" 1545665740 492338 fbc6ec10488170d17ce1ddcc30fe1515 ""
+["bibtex aassumpcao-draft2"] 1546279810 "aassumpcao-draft2.aux" "aassumpcao-draft2.bbl" "aassumpcao-draft2" 1546279811
+  "/Users/aassumpcao/library.bib" 1546220839 499899 a25e9e2ed18aa66cb57e26d8f491b4bc ""
   "/usr/local/texlive/2018/texmf-dist/bibtex/bst/base/apalike.bst" 1480098433 24635 604dafcc79f521a11ea73e506e1fbd98 ""
-  "aassumpcao-draft2.aux" 1545665811 4346 1e86fbc876a1b1b75111d60e0b9a55ce ""
+  "aassumpcao-draft2.aux" 1546279811 4889 0e2d026d05b4c911677e05b3ed1bfefd ""
   (generated)
   "aassumpcao-draft2.bbl"
   "aassumpcao-draft2.blg"
-["pdflatex"] 1545665810 "aassumpcao-draft2.tex" "aassumpcao-draft2.pdf" "aassumpcao-draft2" 1545665811
+["pdflatex"] 1546279810 "aassumpcao-draft2.tex" "aassumpcao-draft2.pdf" "aassumpcao-draft2" 1546279811
   "/usr/local/texlive/2018/texmf-dist/fonts/map/fontname/texfonts.map" 1511824771 3332 103109f5612ad95229751940c61aada0 ""
   "/usr/local/texlive/2018/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1480098698 1004 54797486969f23fa377b128694d548df ""
   "/usr/local/texlive/2018/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1480098698 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -58,7 +58,6 @@
   "/usr/local/texlive/2018/texmf-dist/tex/generic/oberdiek/hobsub-generic.sty" 1522444781 185313 3e16abd014cb2c328020e45d63ed7f45 ""
   "/usr/local/texlive/2018/texmf-dist/tex/generic/oberdiek/hobsub-hyperref.sty" 1480098815 70864 bcd5b216757bd619ae692a151d90085d ""
   "/usr/local/texlive/2018/texmf-dist/tex/generic/oberdiek/ifpdf.sty" 1490564930 1251 d170e11a3246c3392bc7f59595af42cb ""
-  "/usr/local/texlive/2018/texmf-dist/tex/generic/oberdiek/ifvtex.sty" 1480098815 6797 90b7f83b0ad46826bc16058b1e3d48df ""
   "/usr/local/texlive/2018/texmf-dist/tex/generic/pgf/basiclayer/pgfcore.code.tex" 1480098816 1006 b103be0bfc8c1682ff1fa9760697a329 ""
   "/usr/local/texlive/2018/texmf-dist/tex/generic/pgf/basiclayer/pgfcorearrows.code.tex" 1480098816 43226 167a99346bfe2676e3efcdde2d81fe45 ""
   "/usr/local/texlive/2018/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreexternal.code.tex" 1480098816 19302 4f089dc590e71f7331e6d5b5ea85273b ""
@@ -147,6 +146,7 @@
   "/usr/local/texlive/2018/texmf-dist/tex/latex/graphics-cfg/color.cfg" 1480098830 1213 620bba36b25224fa9b7e1ccb4ecb76fd ""
   "/usr/local/texlive/2018/texmf-dist/tex/latex/graphics-cfg/graphics.cfg" 1480098830 1224 978390e9c2234eab29404bc21b268d1e ""
   "/usr/local/texlive/2018/texmf-dist/tex/latex/graphics-def/pdftex.def" 1515537368 17334 520b9b85ad8a2a48eda3f643e27a5179 ""
+  "/usr/local/texlive/2018/texmf-dist/tex/latex/graphics/color.sty" 1523134385 7028 112f909feb676788e7ea1c5b0b76320f ""
   "/usr/local/texlive/2018/texmf-dist/tex/latex/graphics/graphics.sty" 1523134385 15272 5a97061616e0c8b2aa79c6615ff769f4 ""
   "/usr/local/texlive/2018/texmf-dist/tex/latex/graphics/graphicx.sty" 1523134385 9063 d0a305975932762117cd1f06a582f896 ""
   "/usr/local/texlive/2018/texmf-dist/tex/latex/graphics/keyval.sty" 1523134385 2591 6404d0c7d28505fb38ce0d86c2e28ae7 ""
@@ -198,10 +198,10 @@
   "/usr/local/texlive/2018/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1528426230 2849778 d20fd0a0d92d412ec9b4143de20d68a5 ""
   "/usr/local/texlive/2018/texmf-var/web2c/pdftex/pdflatex.fmt" 1528423583 4220582 296642f53d93cdbc02373533d0f42b0a ""
   "/usr/local/texlive/2018/texmf.cnf" 1523934483 577 0b39adfd7c93507ff20c9c14c2f1a33f ""
-  "aassumpcao-draft2.aux" 1545665811 4346 1e86fbc876a1b1b75111d60e0b9a55ce ""
-  "aassumpcao-draft2.bbl" 1545665763 3093 3ea8bea4ac5260c31eaf77f14af96f6c "bibtex aassumpcao-draft2"
-  "aassumpcao-draft2.out" 1545665811 1098 fcf1ec2620cad6c61734c95d1fe1b519 ""
-  "aassumpcao-draft2.tex" 1545665810 31596 0f388ea50934255dbd13a2875d96c0ce ""
+  "aassumpcao-draft2.aux" 1546279811 4889 0e2d026d05b4c911677e05b3ed1bfefd ""
+  "aassumpcao-draft2.bbl" 1546279810 3623 b4672614ec2f8b45836ac8820eaadac1 "bibtex aassumpcao-draft2"
+  "aassumpcao-draft2.out" 1546279811 1098 fcf1ec2620cad6c61734c95d1fe1b519 ""
+  "aassumpcao-draft2.tex" 1546279808 34191 d14e64d35ec4f7bf877965f568395b1b ""
   "tab_sumstats.tex" 1545242355 859 d7d62408888b27ca058b67b664aca19d ""
   (generated)
   "aassumpcao-draft2.pdf"

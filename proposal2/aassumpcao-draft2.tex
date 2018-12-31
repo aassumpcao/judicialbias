@@ -1,46 +1,39 @@
 \documentclass[11pt]{article}
-\usepackage{amssymb}
-\usepackage{amsmath}
-\usepackage{bbm}
-\usepackage{centernot}
 \usepackage{amsfonts}
-\usepackage{eurosym}
-\usepackage{geometry}
-\usepackage{ulem}
-\usepackage{graphicx}
-\usepackage{tikz}
-\usepackage{rotating}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{bbm}
 \usepackage{caption}
+\usepackage{caption}
+\usepackage{centernot}
 \usepackage{color}
-\usepackage{setspace}
-\usepackage{sectsty}
 \usepackage{comment}
-\usepackage{footmisc}
+\usepackage{dcolumn}
+\usepackage{diagbox}
+\usepackage{eurosym}
 \usepackage[inline]{enumitem}
-\usepackage{caption}
+\usepackage{footmisc}
+\usepackage{graphicx}
+\usepackage{makecell}
+\usepackage{multirow}
 \usepackage{natbib}
 \usepackage{pdflscape}
+\usepackage{rotating}
+\usepackage{sectsty}
+\usepackage{setspace}
 \usepackage{subfigure}
-\usepackage{array}
+\usepackage{tikz}
 \usepackage{titling}
-\usepackage{multirow}
-\usepackage{diagbox}
-\usepackage{dcolumn}
-\usepackage{makecell}
+\usepackage{ulem}
 \usepackage[hidelinks]{hyperref}
 \hypersetup{unicode = true}
+\usepackage{geometry}
+\geometry{left = 1.0in,right = 1.0in,top = 1.0in,bottom = 1.0in}
 
 \normalem
-
 \onehalfspacing
-\newtheorem{theorem}{Theorem}
-\newtheorem{corollary}[theorem]{Corollary}
-\newtheorem{proposition}{Proposition}
-\newenvironment{proof}[1][Proof]{\noindent\textbf{#1.}}{\ \rule{0.5em}{0.5em}}
 
-\newtheorem{hyp}{Hypothesis}
-\newtheorem{subhyp}{Hypothesis}[hyp]
-\renewcommand{\thesubhyp}{\thehyp\alph{subhyp}}
 % \renewcommand{\labelenumi}{H.\arabic{enumi}.} % Redefine new labels for hyp
 \newcommand{\T}{\rule{0pt}{2.6ex}}            % Top strut
 \newcommand{\B}{\rule[-1.2ex]{0pt}{0pt}}      % Bottom strut
@@ -55,13 +48,11 @@
 \newcolumntype{C}[1]{>{\centering\let\newline\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{R}[1]{>{\raggedleft\let\newline\\arraybackslash\hspace{0pt}}m{#1}}
 
-\geometry{left=1.0in,right=1.0in,top=1.0in,bottom=1.0in}
-
 \begin{document}
 
 \begin{titlepage}
 \title{Judicial Favoritism of Politicians: Evidence from Small Claims Courts}
-\author{Andre Assumpcao\thanks{PhD Student, Department of Public Policy, The University of North Carolina at Chapel Hill. Contact details: \href{mailto:aassumpcao@unc.edu}{\textcolor{blue}{aassumpcao@unc.edu}}}}
+\author{Andre Assumpcao\thanks{PhD Student, Department of Public Policy, The University of North Carolina at Chapel Hill. Contact details: \href{mailto:aassumpcao@unc.edu}{\textcolor{blue}{aassumpcao@unc.edu}}. This paper will likely be coauthored with colleague at the Brazilian Association of Jurimetrics, but I am pending his final confirmation. Until then, I keep it as a single-authored piece.}}
 \date{December 21, 2018}
 
 \maketitle
@@ -171,7 +162,19 @@ Armed with these datasets, the researcher can now compare the statistical moment
 
 \subsection{Court Outcome Prediction} \label{subsec:methods2_paper2}
 
-(TBU)
+In the second empirical exercise, I want to predict court outcomes for all elected politicians in the state of São Paulo. Though many of them are not litigants in small claims cases, the prediction of outcomes serves for measuring the economic value of the pro-politician bias in the state: in equation \refp{eq:bias1}, the total (predicted) and the observed economic values are given by $\text{EV}_{p}$ and $\text{EV}_{o}$, respectively. For the total economic value $\text{EV}_{p}$, I multiply the out-of-sample outcome $\hat{y}_{i}$ by the average in-sample claim amount $\bar{x}$. For the observed economic value $\text{EV}_{o}$, I multiply the actual court outcome $y_{i}$ and claim amount $x_{i}$ for all observed, in-sample small claims cases in which at least one litigant was a politician. The bias equation \refp{eq:bias2} then represents how much of the economic value in these small claims cases is potentially redistributed to politicians via judicial decisions. \\
+
+\begin{align}
+  \text{EV}_{p} = \sum_{i = 1}^{22,171} \hat{y}_{i} \times \bar{x} \label{eq:bias1} \quad ; \quad \text{EV}_{o} = \sum_{i = 1}^{i} y_{i} \times x_{i}
+\end{align}
+
+\begin{equation}
+  \text{bias} = \text{EV}_{o} / \text{EV}_{p} \times 100 \label{eq:bias2}
+\end{equation} \\
+
+To estimate equation $\text{EV}_{p}$ in \refp{eq:bias1}, I employ standard supervised machine learning (ML) techniques \citep{AtheypredictionUsingbig2017,KleinbergHumanDecisionsMachine2018,AtheyImpactMachineLearning2019}. First, I process the data extracted from the São Paulo state court website into training and testing datasets. The training part is where the ML algorithm learns about the court outcome distribution and the test data is where it verifies the quality of the prediction. The hold-out is the entire sample of elected politicians in the state. I use 10-fold cross validation techniques and the five most popular ML algorithms (logit, lasso, single tree, kNN, random forest) to find the best prediction instrument. The quality assessment metrics are the root mean square error (RMSE), the area under the receiver operating characteristics curve (AUC \emph{in short}), sensitivity, specificity, accuracy, and precision measures.
+
+It is important to understand why ML is better than standard ordinary least squares (OLS) in predicting outcomes. According to \citet{KleinbergPredictionPolicyProblems2015}, when estimating OLS, the researcher is focused on eliminating in-sample bias and increasing variance as a trade-off. In out-of-sample predictions, nonparametric ML estimation accepts bias if the out-of-sample RMSE is smaller as a result.
 
 \section{Further Development} \label{sec:conclusion_paper2}
 
@@ -179,8 +182,7 @@ This paper investigates whether there is differential treatment of politicians i
 
 Besides the evidence of judicial favoritism of politicians, this project also makes predictions about the potential court outcomes if more politicians were taken to court. Though I only focus on a small set of cases, those filed in São Paulo's special civil tribunals (SCTs), the predictions should serve as a benchmark for the deviations between a \emph{de facto} and a \emph{de jure} independent judiciary. There are clear policy improvements discussed in the political economy literature when the judiciary branch is independent and able to check the power of the executive and the legislative \citep{BalandChapter69Governance2010}.
 
-The longest task in this paper is data collection. As discussed in section \ref{sec:data_paper2}, I have a clear roadmap of the next steps necessary for the completion of this project. I will write the web scraping scripts based on existing programs and extract case information once court documents are downloaded. Once data collection is finished, the analysis is fairly straightforward as all steps for measuring the bias effect and machine learning predictions are respectively documented in \citet{AbramsJudgesVaryTheir2012} and \citet{AtheypredictionUsingbig2017,AtheyImpactMachineLearning2019}. Therefore, I believe this project is feasible and it will be completed as a chapter of my dissertation project.
-
+The longest task in this paper is data collection. As discussed in section \ref{sec:data_paper2}, I have a clear roadmap of the next steps necessary for the completion of this project. I will write the web scraping scripts based on existing programs and extract case information once court documents are downloaded. Once data collection is finished, the analysis is fairly straightforward as all steps for measuring the bias effect and machine learning predictions are respectively documented in \citet{AbramsJudgesVaryTheir2012}, \citet{AtheypredictionUsingbig2017,AtheyImpactMachineLearning2019}, and \citet{KleinbergPredictionPolicyProblems2015,KleinbergHumanDecisionsMachine2018}. Therefore, I believe this project is feasible and it will be completed as a chapter of my dissertation project.
 
 \clearpage
 
