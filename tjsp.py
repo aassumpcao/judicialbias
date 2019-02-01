@@ -37,8 +37,10 @@ class scraper:
     """
     # initial arguments (esaj website and browser)
     browser  = []
-    url      = 'https://esaj.tjsp.jus.br/cjpg/'
+    urlcase  = 'https://esaj.tjsp.jus.br/cjpg/'
+    urldec   = 'https://esaj.tjsp.jus.br/cpopg/open.do'
     classSCT = 'Procedimento do Juizado Especial Cível'
+    java     = 'return document.getElementsByTagName("html")[0].innerHTML'
     
     # init method share by all class instances
     def __init__(self, browser):
@@ -55,9 +57,8 @@ class scraper:
         self.name = name
 
         # navigate to page
-        self.browser.get(self.url)
+        self.browser.get(self.urlcase)
 
-        # search parameters
         # find text box to write politicians' name in and case class
         nameid  = 'iddadosConsulta.pesquisaLivre'
         classid = 'classe_selectionText'
@@ -129,11 +130,6 @@ class scraper:
                     # extend case numbers list
                     casenumbers.extend(extranumbers)
                     # break out in last iteration
-                    
-
-            # wrangle data
-            casenumbers = pd.DataFrame(casenumbers)
-            casenumbers.columns = ['sctnumber']
 
             # return outcome
             return casenumbers
@@ -158,10 +154,60 @@ class scraper:
         """method to download case decisions by candidate information"""
         
         # search parameters
-        # not available
+        # store case number in class object
+        self.number = number
 
-        # return call
-        return 'This method has not been developed yet'
+        # navigate to page
+        self.browser.get(self.urldec)
+
+        # find text box to write case numbers
+        numberid = 'numeroDigitoAnoUnificado'
+
+        # click to search and check whether information has been loaded
+        sbtpath = '//*[(@id = "pbEnviar")]'
+        check   = '//*[(@class = "subtitle")]'
+
+        # try catch for cases that weren't found
+        try:
+            # find 'case number' text box and send sct number
+            numberbox = self.browser.find_element_by_id(numberid)
+            numberbox.send_keys(str(self.number[0:13]))
+            numberbox.send_keys(str(self.number[16:20]))
+            numberbox.send_keys(Keys.TAB)
+
+            # find submit button and click it to search cases
+            self.browser.find_element_by_xpath(sbtpath).click()
+
+            # count to wait for elements to be loaded
+            counter = 1
+
+            # while loop to test it for us
+            while counter < 7:
+                # check if elements are visible in first page and wait if not
+                if len(self.browser.find_elements_by_xpath(check)) == 1:
+                    time.sleep(5)
+                    counter += 1
+                else:
+                    break
+
+            # save inner html to object
+            html = self.browser.execute_script(self.java)
+
+            # determine file names
+            file = './sct' + str(self.number) + '.html'
+
+            # save to file with correct encoding
+            try:
+                codecs.open(file, 'w', 'utf-8').write(html)
+            except:
+                codecs.open(file, 'w', 'cp1252').write(html)
+
+            # return status
+            return 'Your decision has been downloaded.'
+
+        # handle error
+        except:
+            return 'Your decision search has failed.'
 
 # define parser class
 class parser:
