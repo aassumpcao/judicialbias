@@ -16,6 +16,7 @@ from selenium.webdriver.support        import expected_conditions as EC
 import numpy as np
 import time
 import re
+import math
 
 # initial options
 # set working dir
@@ -41,29 +42,84 @@ browser = webdriver.Chrome(executable_path = CHROMEDRIVER_PATH)
 #                            chrome_options  = chrome_options)
 
 # set implicit wait for page load
-browser.implicitly_wait(10)
+browser.implicitly_wait(60)
+
+from tjsp import *
+
+scraper(browser).sct_case('Paulo Maluf')
 
 ### methods code
 ################################# every url entry should become self.url
 ################################# every browser entry should become self.browser
+url      = 'https://esaj.tjsp.jus.br/cjpg/'
+classSCT = 'Procedimento do Juizado Especial Cível'
 
-# provide e-saj url
-url = 'https://esaj.tjsp.jus.br/cjpg/'
+
+# store politician's name
+name = 'Fernando Haddad'
+
+# store politician's name in class object
+name = 'Paulo Maluf'
 
 # navigate to page
 browser.get(url)
 
-# find box to write politicians' name down
+# search parameters
+# find text box to write politicians' name in and case class
 nameid  = 'iddadosConsulta.pesquisaLivre'
+classid = 'classe_selectionText'
+
+# click to search 
 sbtpath = '//*[(@id = "pbSubmit")]'
 
-# find 'pesquisa livre' box element in the webpage
-namebox = browser.find_element_by_id('iddadosConsulta.pesquisaLivre')
+# find total number of cases in page
+numbers = '//*[contains(concat( " ", @class, " " ),' + \
+    ' concat( " ", "fonteNegrito", " " ))]'
 
-# send politician's name
-namebox.send_keys('Fernando E Holiday')
+# fint total number of cases in all pages and extract it
+results = '//*[@class = "espacamentoCimaBaixo"]' + \
+    '//*[contains(text(), "Resultados")]'
+regex0  = re.compile('(?<=de )[0-9]+', re.IGNORECASE)
+regex1  = re.compile('[0-9]+(?= a)', re.IGNORECASE)
 
+# find next page button
+nextpage = '//*[@title = "Próxima página"]'
 
+# find 'pesquisa livre' text box and send politician's name
+browser.find_element_by_id(nameid).send_keys(name)
 
-namebox.send_keys('Fernando E Holiday')
+# find 'classe' text box and send special civil tribunals id
+WebDriverWait(browser, .5)
+sctclass = browser.find_element_by_id(classid)
+sctclass.send_keys(classSCT)
+sctclass.send_keys(Keys.TAB)
 
+# find submit button and click it to search cases
+browser.find_element_by_xpath(sbtpath).click()
+
+# check if elements are visible in first page and wait if not
+visible = EC.presence_of_element_located((By.XPATH, results))
+
+# extract total number of case hits
+total = browser.find_element_by_xpath(results).text
+total = re.search(regex0, total)[0]
+
+# total pages
+pages = math.ceil(int(total) / 10)
+
+# find all case numbers in first page and get them
+casenumbers = browser.find_elements_by_xpath(numbers)
+casenumbers = [x.text for x in casenumbers[:10]]
+
+# run different loops if there are multiple pages
+if pages > 1:
+    # for loop to construct list of case numbers in other pages
+    for i in range(1, pages):
+        # click to advance pages
+        browser.find_element_by_xpath(nextpage).click()
+        time.sleep(1)
+        # get additional case numbers
+        extranumbers = browser.find_elements_by_xpath(numbers)
+        extranumbers = [x.text for x in extranumbers[:10]]
+        # extend case numbers list
+        casenumbers.extend(extranumbers)
