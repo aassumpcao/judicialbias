@@ -28,14 +28,14 @@ class scraper:
     """series of methods to download case documents from tj-sp
         
     attributes:
+        browser:    placeholder for selenium browser call
     
     methods:
-        case:
-        sct_case:
-        decision:
+        case:       download case number by name (only SCT class for now)
+        decision:   use case number to download judicial decision
     
     """
-    # initial arguments (esaj website and browser)
+    # initial arguments (for both esaj website and browser)
     browser  = []
     urlcase  = 'https://esaj.tjsp.jus.br/cjpg/'
     urldec   = 'https://esaj.tjsp.jus.br/cpopg/open.do'
@@ -45,11 +45,12 @@ class scraper:
     # init method share by all class instances
     def __init__(self, browser):
         """load into class the browser"""
-        # browser
+        
+        # store browser info
         self.browser = browser
 
-    # sct case number scraper function (special civil tribunals)
-    def sct_case(self, name):
+    # case number scraper function (only available for special civil tribunals)
+    def case(self, name):
         """method to narrow in on sct cases from list of cases"""
         
         # search parameters
@@ -95,33 +96,32 @@ class scraper:
             time.sleep(1)
             self.browser.find_element_by_xpath(sbtpath).click()
 
-            # check if elements are visible in first page and wait if not
+            # force wait before information is loaded
             time.sleep(2)
 
-            # check for error
+            # return the text containing the results of the search
             searched = self.browser.find_element_by_xpath(search).text
 
-            # extract total number of case hits
+            # confirm the number of cases found
             total = re.search(regex0, searched)
 
             # exit if no cases are found
             if total == None: return 'No cases found for ' + self.name + '.'       
             
-            # total pages
+            # else determine the number of pages containing all cases
             total = re.search(regex0, searched)[0]
             pages = math.ceil(int(total) / 10)
 
-            # find all case numbers in first page and get them
+            # find all individual case numbers in first page and extract them
             casenumbers = self.browser.find_elements_by_xpath(numbers)
             casenumbers = [x.text for x in casenumbers[:10]]
             
-            # continue if there are matches
-            # run different loops if there are multiple pages
+            # run loop if there are multiple pages
             if pages > 1:
                 # for loop to construct list of case numbers in other pages
                 for i in range(pages - 1):
                     if not i == pages - 1:
-                        # click to advance pages
+                        # click to advance pages except for last page
                         self.browser.find_element_by_xpath(nextpage).click()
                     time.sleep(1)
                     # get additional case numbers
@@ -129,25 +129,24 @@ class scraper:
                     extranumbers = [x.text for x in extranumbers[:10]]
                     # extend case numbers list
                     casenumbers.extend(extranumbers)
-                    # break out in last iteration
 
-            # return outcome
+            # return case numbers outcome as list
             return casenumbers
 
         # handle error
         except:
-            return 'There were errors when finding SCT cases for candidate ' \
+            return 'There were errors when finding cases for candidate ' \
                 + self.name + '.'
 
-    # case number scraper function
-    def case(self, name):
-        """method to download any case number by candidate information"""
+    # # case number scraper function
+    # def case(self, name):
+    #     """method to download any case number by candidate information"""
         
-        # search parameters
-        # not available
+    #     # search parameters
+    #     # not available
 
-        # return call
-        return 'This method has not been developed yet'
+    #     # return call
+    #     return 'This method has not been developed yet'
 
     # sct case decisions scraper function
     def decision(self, number):
@@ -167,9 +166,9 @@ class scraper:
         sbtpath = '//*[(@id = "pbEnviar")]'
         check   = '//*[(@class = "subtitle")]'
 
-        # try catch for cases that weren't found
+        # try catch for handling cases not available in online database
         try:
-            # find 'case number' text box and send sct number
+            # find 'case number' text box and send individual case number
             numberbox = self.browser.find_element_by_id(numberid)
             numberbox.send_keys(str(self.number[0:13]))
             numberbox.send_keys(str(self.number[16:20]))
@@ -178,10 +177,10 @@ class scraper:
             # find submit button and click it to search cases
             self.browser.find_element_by_xpath(sbtpath).click()
 
-            # count to wait for elements to be loaded
+            # counter used in while loop when waiting for elements to be loaded
             counter = 1
 
-            # while loop to test it for us
+            # while loop to test whether elements are loaded
             while counter < 7:
                 # check if elements are visible in first page and wait if not
                 if len(self.browser.find_elements_by_xpath(check)) == 1:
@@ -196,7 +195,7 @@ class scraper:
             # determine file names
             file = './sct' + str(self.number) + '.html'
 
-            # save to file with correct encoding
+            # save to disk with correct encoding
             try:
                 codecs.open(file, 'w', 'utf-8').write(html)
             except:
@@ -212,12 +211,38 @@ class scraper:
 # define parser class
 class parser:
     """series of methods to parse case documents from tj-sp
+
+    attributes:
+        file:
+
+    methods:
+
     """
-    # init method share by all class instances
+
+    # define static variables used for parsing all tables
+    soup   = []
+    tables = []
+
+    # define regex compile for substituting weird characters in all tables
+    regex0 = re.compile(r'\n|\t')
+    regex1 = re.compile(r'\\n|\\t')
+    regex2 = re.compile(r'\\xa0')
+    
+    # init method shared by all class instances
     def __init__(self, file):
+        """load into class the file which will be parsed"""
         
-        # search parameters
-        # not available
+        # try utf-8 encoding first or cp1252 if loading fails
+        try:
+            self.file = codecs.open(file, 'r', 'utf-8').read()
+        except:
+            self.file = codecs.open(file, 'r', 'cp1252').read()
+
+        # call BeautifulSoup to read string as html
+        self.soup = BeautifulSoup(self.file, 'lxml')
+
+        # find all tables in document
+        self.tables = self.soup.find_all('table')
 
         # return call
-        return 'This method has not been developed yet'
+        return 'This method has not fullt been developed yet'
