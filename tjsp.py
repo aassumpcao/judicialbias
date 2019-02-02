@@ -245,4 +245,4 @@ class parser:
         self.tables = self.soup.find_all('table')
 
         # return call
-        return 'This method has not fullt been developed yet'
+        return 'This method has not been fully developed yet'
