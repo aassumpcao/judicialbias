@@ -223,6 +223,11 @@ class parser:
     soup   = []
     tables = []
 
+    # define static variables for finding the eight tables of interest
+    terms = re.compile('( )+(Dados do processo)|(Partes do processo)|' +
+        '(Movimentações)|(Petições diversas)|(Incidentes, ações)|' + 
+        '(Apensos, Entranhados)|(Audiências)|(Histórico de classes)')
+
     # define regex compile for substituting weird characters in all tables
     regex0 = re.compile(r'\n|\t')
     regex1 = re.compile(r'\\n|\\t')
@@ -244,5 +249,17 @@ class parser:
         # find all tables in document
         self.tables = self.soup.find_all('table')
 
-        # return call
-        return 'This method has not been fully developed yet'
+        ### initial objects for parser
+        # find summary table
+        summary = soup.find_all('table', {'class': 'secaoFormBody'})[1]
+
+        # extract variable names from table
+        thead = [label.text for label in \
+                 summary.find_all('label', {'class': 'labelClass'})]
+
+        # extract variable indexes from table
+        ihead = [i for i in range(len(summary.find_all('tr', {'class': ''}))) \
+                 if not summary.find_all('tr', {'class': ''})[i].find('label', \
+                 {'class': 'labelClass'}) == None]
+
+        # extract variable values and match them to names
