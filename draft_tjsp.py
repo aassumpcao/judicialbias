@@ -10,14 +10,14 @@ import time
 import re
 import math
 from bs4 import BeautifulSoup
-from selenium                          import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions        import TimeoutException
-from selenium.common.exceptions        import StaleElementReferenceException
-from selenium.webdriver.common.by      import By
-from selenium.webdriver.common.keys    import Keys
-from selenium.webdriver.support.ui     import WebDriverWait
-from selenium.webdriver.support        import expected_conditions as EC
+# from selenium                          import webdriver
+# from selenium.webdriver.chrome.options import Options
+# from selenium.common.exceptions        import TimeoutException
+# from selenium.common.exceptions        import StaleElementReferenceException
+# from selenium.webdriver.common.by      import By
+# from selenium.webdriver.common.keys    import Keys
+# from selenium.webdriver.support.ui     import WebDriverWait
+# from selenium.webdriver.support        import expected_conditions as EC
 
 
 # initial options
@@ -32,63 +32,86 @@ WINDOW_SIZE      ='1920,1080'
 
 # set options
 chrome_options = Options()
+chrome_options.add_argument('--headless')
+chrome_options.add_argument('--window-size=%s' % WINDOW_SIZE)
+chrome_options.binary_location = CHROME_PATH
+browser.implicitly_wait(60)
+
+chrome_options = Options()
 chrome_options.binary_location = CHROME_PATH
 # open invisible browser
 browser = webdriver.Chrome(executable_path = CHROMEDRIVER_PATH)
 # set implicit wait for page load
-browser.implicitly_wait(60)
 
 # tests ok!
-tjsp.scraper(browser).sct_case('Fernando Haddad')
-tjsp.scraper(browser).sct_case('Nathan Jensen')
-tjsp.scraper(browser).sct_case('"marcelo assumpção"')
+tjsp.scraper(browser).case('"Fernando Holiday"')
+tjsp.scraper(browser).case('Nathan Jensen')
+tjsp.scraper(browser).case('"marcelo assumpção"')
 
 # tests ok!
-tjsp.scraper(browser).decision('10006570820188260320')
+tjsp.scraper(browser).decision('10092683820178260011')
 tjsp.scraper(browser).decision('00054902620128260505')
 tjsp.scraper(browser).decision('00085892420138260002')
 tjsp.scraper(browser).decision('00085892420138260002')
 
+# tests ok!
+tjsp.parser('sct10092683820178260011.html').parse_summary()
+tjsp.parser('sct00085892420138260002.html').parse_summary()
+tjsp.parser('sct10006570820188260320.html').parse_summary()
+
+# testing
+tjsp.parser(file).parse_summary()
+tjsp.parser(file).parse_litigants()
+
+
 import tjsp
-import imp
-imp.reload(tjsp)
+import importlib
+importlib.reload(tjsp)
 
 browser.quit()
 exit()
 
-file = 'sct00054902620128260505.html'
+file = 'sct10092683820178260011.html'
 
 file = tjsp.parser(file)
 
 soup = file.soup
 
-# define static variables for finding tables
-terms = re.compile('( )+(Dados do processo)|(Partes do processo)|' +
-    '(Movimentações)|(Petições diversas)|(Incidentes, ações)|' + 
-    '(Apensos, Entranhados)|(Audiências)|(Histórico de classes)')
+# find litigants table
+table = soup.find('table', {'id': 'tablePartesPrincipais'})
 
-# define regex for substituting weird characters in all tables
-regex0 = re.compile(r'\n|\t')
-regex1 = re.compile(r'\\n|\\t')
-regex2 = re.compile(r'\\xa0')
+# find text in reach row
+text = [row.text for row in table.find_all('tr', {'class': 'fundoClaro'})]
 
-### parse_summary(self, transpose = False):
-"""method to wrangle summary information"""
+# clean up string
+text = [re.sub(regex0,' ', i) for i in text]
+text = [re.sub(regex2, '', i) for i in text]
+text = [re.sub(regex4,' ', i) for i in text]
 
-### initial objects for parser
-# find summary table
-summary = soup.find_all('table', {'class': 'secaoFormBody'})[1]
+# split variable names and contents. then, flatten list
+text = [re.split(regex5, i) for i in text]
 
-# extract text from table
-thead = [label.text for label in \
-         summary.find_all('label', {'class': 'labelClass'})]
+# flatten list, trim whitespace, replace ':', and delete empty strings
+flat = [i for j in text for i in j]
+flat = [i.strip() for i in flat]
+flat = [re.sub(':', '', i) for i in flat]
+flat = list(filter(regex6.search, flat))
 
-# extract index from table
-ihead = [i for i in range(len(summary.find_all('tr', {'class': ''}))) \
-         if not summary.find_all('tr', {'class': ''})[i].find('label', \
-         {'class': 'labelClass'}) == None]
+# created nested list of litigant categories and their names
+text = [flat[i:i+2] for i in range(0, len(flat), 2)]
 
-# next step is to reduce the dimensions of the variable values to match
-# the number of names we have
-###### See parse_details tse
-summary.find_all('tr', {'class': ''})
+# transform to pd dataset
+text = pd.DataFrame(text)
+
+# return outcome if transpose is not provided as argument
+if transpose == False:
+    text.columns = ['litigantType', 'values']
+    return pd.DataFrame(text)
+else:
+    text = text.T
+    text.columns = text.iloc[0]
+    return pd.DataFrame(text[1:])
+
+
+
+

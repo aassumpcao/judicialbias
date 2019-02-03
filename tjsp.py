@@ -213,9 +213,11 @@ class parser:
     """series of methods to parse case documents from tj-sp
 
     attributes:
-        file:
+        file:               path to html containing the candidacy decision
 
     methods:
+        parse_summary:      parse summary table
+        parse_litigants:    parse litigants table
 
     """
 
@@ -223,15 +225,15 @@ class parser:
     soup   = []
     tables = []
 
-    # define static variables for finding the eight tables of interest
-    terms = re.compile('( )+(Dados do processo)|(Partes do processo)|' +
-        '(Movimentações)|(Petições diversas)|(Incidentes, ações)|' + 
-        '(Apensos, Entranhados)|(Audiências)|(Histórico de classes)')
-
-    # define regex compile for substituting weird characters in all tables
+    # define regex for substituting weird characters in all tables
     regex0 = re.compile(r'\n|\t')
     regex1 = re.compile(r'\\n|\\t')
-    regex2 = re.compile(r'\\xa0')
+    regex2 = re.compile(r'\xa0')
+    regex3 = re.compile(r':', re.IGNORECASE)
+    regex4 = re.compile(' +')
+    regex5 = re.compile('(?<= )([a-z]+:)', re.IGNORECASE)
+    regex6 = re.compile('[a-z]+')
+
     
     # init method shared by all class instances
     def __init__(self, file):
@@ -246,20 +248,82 @@ class parser:
         # call BeautifulSoup to read string as html
         self.soup = BeautifulSoup(self.file, 'lxml')
 
-        # find all tables in document
-        self.tables = self.soup.find_all('table')
+    #1 parse summary info table:
+    def parse_summary(self, transpose = False):
+        """method to wrangle summary information"""
 
-        ### initial objects for parser
         # find summary table
-        summary = soup.find_all('table', {'class': 'secaoFormBody'})[1]
+        table = self.soup.find_all('table', {'class': 'secaoFormBody'})[1]
 
-        # extract variable names from table
-        thead = [label.text for label in \
-                 summary.find_all('label', {'class': 'labelClass'})]
+        # find text in each row
+        text = [row.text for row in table.find_all('tr', {'class': ''})]
 
-        # extract variable indexes from table
-        ihead = [i for i in range(len(summary.find_all('tr', {'class': ''}))) \
-                 if not summary.find_all('tr', {'class': ''})[i].find('label', \
-                 {'class': 'labelClass'}) == None]
+        # subset list to meaningful variables
+        text = list(filter(self.regex3.search, text))
 
-        # extract variable values and match them to names
+        # clean up string
+        text = [re.sub(self.regex0, '', i) for i in text]
+        text = [re.sub(self.regex2, '', i) for i in text]
+        text = [re.sub(self.regex4,' ', i) for i in text]
+
+        # split variable names and content
+        text = [re.split(self.regex3, i, maxsplit = 1) for i in text]
+
+        # transform to pd dataset, drop duplicates, and reindex rows
+        text = pd.DataFrame(text).drop_duplicates().reset_index(drop = True)
+
+        # return outcome if transpose is not provided as argument
+        if transpose == False:
+            text.columns = ['variables', 'values']
+            return pd.DataFrame(text)
+        else:
+            text = text.T
+            text.columns = text.iloc[0]
+            return pd.DataFrame(text[1:])
+
+    #2 parse litigants
+    def parse_litigants(self, transpose = False):
+        """method to wrangle litigant information"""
+        
+        # find litigants table
+        table = self.soup.find('table', {'id': 'tablePartesPrincipais'})
+
+        # find text in reach row
+        text = [row.text for row in \
+                table.find_all('tr', {'class': 'fundoClaro'})]
+
+        # clean up string
+        text = [re.sub(self.regex0,' ', i) for i in text]
+        text = [re.sub(self.regex2, '', i) for i in text]
+        text = [re.sub(self.regex4,' ', i) for i in text]
+
+        # split variable names and contents. then, flatten list
+        text = [re.split(self.regex5, i) for i in text]
+
+        # flatten list, trim whitespace, replace ':', and delete empty strings
+        flat = [i for j in text for i in j]
+        flat = [i.strip() for i in flat]
+        flat = [re.sub(':', '', i) for i in flat]
+        flat = list(filter(self.regex6.search, flat))
+
+        # created nested list of litigant categories and their names
+        text = [flat[i:i + 2] for i in range(0, len(flat), 2)]
+
+        # transform to pd dataset
+        text = pd.DataFrame(text)
+
+        # return outcome if transpose is not provided as argument
+        if transpose == False:
+            text.columns = ['parts', 'values']
+            return pd.DataFrame(text)
+        else:
+            text = text.T
+            text.columns = text.iloc[0]
+            return pd.DataFrame(text[1:])
+
+    #3 parse updates
+    def parse_updates(self, transpose = False):
+
+        pass
+
+
