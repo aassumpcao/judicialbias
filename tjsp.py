@@ -218,6 +218,9 @@ class parser:
         parse_litigants:    parse litigants table
         parse_updates:      parse case updates
         parse_petitions:    parse petitions information
+        parse_incidents:
+        parse_attachments:
+        parse_hearings:
 
     """
 
@@ -251,7 +254,7 @@ class parser:
 
     #1 parse summary info table:
     def parse_summary(self, transpose = False):
-        """method to wrangle summary information"""
+        """method to parse summary information"""
 
         # find summary table
         table = self.soup.find_all('table', {'class': 'secaoFormBody'})[1]
@@ -284,7 +287,7 @@ class parser:
 
     #2 parse litigants
     def parse_litigants(self, transpose = False):
-        """method to wrangle litigant information"""
+        """method to parse litigant information"""
         
         # find litigants table
         table = self.soup.find('table', {'id': 'tablePartesPrincipais'})
@@ -298,7 +301,7 @@ class parser:
         text = [re.sub(self.regex2, '', i) for i in text]
         text = [re.sub(self.regex4,' ', i) for i in text]
 
-        # split variable names and contents. then, flatten list
+        # split variable names and contents.t
         text = [re.split(self.regex5, i) for i in text]
 
         # flatten list, trim whitespace, replace ':', and delete empty strings
@@ -324,7 +327,7 @@ class parser:
 
     #3 parse updates
     def parse_updates(self):
-        """method to wrangle update information"""
+        """method to parse update information"""
 
         # find updates table
         table = self.soup.find('tbody', {'id': 'tabelaTodasMovimentacoes'})
@@ -355,8 +358,72 @@ class parser:
 
     #4 parse petitions
     def parse_petitions(self):
+        """method to parse petition information"""
 
+        # find petitions table
+        table = self.soup.find_all('table', \
+                {'style': 'margin-left:15px; margin-top:1px;'})[2]
+
+        # find text in each row
+        text = [row.text for row in table.find_all('tbody')]
+
+        # clean up string
+        text = [re.sub(self.regex0, '', i) for i in text]
+        text = [re.sub(self.regex2, '', i) for i in text]
+        text = [re.sub(self.regex4,' ', i) for i in text]
+
+        # split variables, flatten list, trim space, and extract unique values
+        text = [re.split(self.regex7, i) for i in text]
+
+        # flatten list, trim whitespace, replace ':', and delete empty strings
+        flat = [i for j in text for i in j]
+        flat = [i.strip() for i in flat]
+        flat = list(filter(self.regex8.search, flat))
+
+        # created nested list of litigant categories and their names
+        text = [flat[i:i + 2] for i in range(0, len(flat), 2)]
+
+        # transform to pd dataset
+        text = pd.DataFrame(text)
+        text.columns = ['dates', 'values']
+
+        # return outcome 
+        return text
+
+    #5 parse incidental information
+    def parse_incidents(self):
         pass
 
+    #6 parse attached cases
+    def parse_casesattached(self):
+        pass
+
+    #7 parse court hearings
+    def parse_hearings(self):
+        """method to parse case hearing information"""
+
+        # find petitions table
+        table = self.soup.find_all('table', \
+                {'style': 'margin-left:15px; margin-top:1px;'})[5]
+
+        # find text in each row
+        # head = [row.text for row in table.find_all('th')]
+        body = [td.text for tr in table.find_all('tr')[1:] \
+                for td in tr.find_all('td')]
+
+        # clean up string
+        text = [re.sub(self.regex0, '', i) for i in body]
+        text = list(filter(self.regex8.search, text))
+        text = [i.strip() for i in text]
+
+        # created nested list of hearings and their names
+        text = [text[i:i + 4] for i in range(0, len(text), 4)]
+
+        # transform to pd dataset
+        text = pd.DataFrame(text)
+        text.columns = ['dates', 'hearing', 'status', 'attendees']
+
+        # return outcome 
+        return text
 
 

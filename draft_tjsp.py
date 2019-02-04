@@ -9,6 +9,8 @@ import numpy as np
 import time
 import re
 import math
+import importlib
+import tjsp
 from bs4 import BeautifulSoup
 # from selenium                          import webdriver
 # from selenium.webdriver.chrome.options import Options
@@ -58,16 +60,11 @@ tjsp.scraper(browser).decision('00085892420138260002')
 tjsp.parser(file).parse_summary()
 tjsp.parser(file).parse_litigants()
 tjsp.parser(file).parse_updates()
+tjsp.parser(file).parse_petitions()
+tjsp.parser(file).parse_hearings()
 
 # testing
-
-
-import tjsp
-import importlib
 importlib.reload(tjsp)
-
-browser.quit()
-exit()
 
 file = 'sct10092683820178260011.html'
 file = 'sct00085892420138260002.html'
@@ -76,38 +73,33 @@ file = 'sct10006570820188260320.html'
 file = tjsp.parser(file)
 
 soup = file.soup
+globals()
 
-
-
-# find updates table
-table = soup.find('tbody', {'id': 'tabelaTodasMovimentacoes'})
+# find petitions table
+table = soup.find_all('table', {'style': 'margin-left:15px; margin-top:1px;'})[5]
 
 # find text in each row
-text = [row.text for row in table.find_all('tr', {'style': ''})]
+head = [row.text for row in table.find_all('th')]
+body = [td.text for tr in table.find_all('tr')[1:] for td in tr.find_all('td')]
+
+
+
+# body = []
+# for tr in table.find_all('tr')[1:]:
+#     for td in tr.find_all('td'):
+#         body.append(td.text)
 
 # clean up string
-text = [re.sub(regex0, '', i) for i in text]
-text = [re.sub(regex2, '', i) for i in text]
-text = [re.sub(regex4,' ', i) for i in text]
+text = [re.sub(regex0, '', i) for i in body]
+text = list(filter(regex8.search, text))
+text = [i.strip() for i in text]
 
-# split variables, flatten list, trim whitespace, and extract unique values
-text = [re.split(regex7, i, maxsplit = 1) for i in text]
-flat = [i for j in text for i in j]
-flat = [i.strip() for i in flat]
-flat = list(filter(regex8.search, flat))
-
-# created nested list of litigant categories and their names
-text = [flat[i:i + 2] for i in range(0, len(flat), 2)]
+# created nested list of hearings and their names
+text = [text[i:i + 4] for i in range(0, len(text), 4)]
 
 # transform to pd dataset
 text = pd.DataFrame(text)
-text.columns = ['updates', 'values']
+text.columns = ['dates', 'hearing', 'status', 'attendees']
 
 # return outcome 
 return text
-
-
-
-
-
-
