@@ -55,13 +55,11 @@ tjsp.scraper(browser).decision('00085892420138260002')
 tjsp.scraper(browser).decision('00085892420138260002')
 
 # tests ok!
-tjsp.parser('sct10092683820178260011.html').parse_summary()
-tjsp.parser('sct00085892420138260002.html').parse_summary()
-tjsp.parser('sct10006570820188260320.html').parse_summary()
-
-# testing
 tjsp.parser(file).parse_summary()
 tjsp.parser(file).parse_litigants()
+tjsp.parser(file).parse_updates()
+
+# testing
 
 
 import tjsp
@@ -72,45 +70,43 @@ browser.quit()
 exit()
 
 file = 'sct10092683820178260011.html'
+file = 'sct00085892420138260002.html'
+file = 'sct10006570820188260320.html'
 
 file = tjsp.parser(file)
 
 soup = file.soup
 
-# find litigants table
-table = soup.find('table', {'id': 'tablePartesPrincipais'})
 
-# find text in reach row
-text = [row.text for row in table.find_all('tr', {'class': 'fundoClaro'})]
+
+# find updates table
+table = soup.find('tbody', {'id': 'tabelaTodasMovimentacoes'})
+
+# find text in each row
+text = [row.text for row in table.find_all('tr', {'style': ''})]
 
 # clean up string
-text = [re.sub(regex0,' ', i) for i in text]
+text = [re.sub(regex0, '', i) for i in text]
 text = [re.sub(regex2, '', i) for i in text]
 text = [re.sub(regex4,' ', i) for i in text]
 
-# split variable names and contents. then, flatten list
-text = [re.split(regex5, i) for i in text]
-
-# flatten list, trim whitespace, replace ':', and delete empty strings
+# split variables, flatten list, trim whitespace, and extract unique values
+text = [re.split(regex7, i, maxsplit = 1) for i in text]
 flat = [i for j in text for i in j]
 flat = [i.strip() for i in flat]
-flat = [re.sub(':', '', i) for i in flat]
-flat = list(filter(regex6.search, flat))
+flat = list(filter(regex8.search, flat))
 
 # created nested list of litigant categories and their names
-text = [flat[i:i+2] for i in range(0, len(flat), 2)]
+text = [flat[i:i + 2] for i in range(0, len(flat), 2)]
 
 # transform to pd dataset
 text = pd.DataFrame(text)
+text.columns = ['updates', 'values']
 
-# return outcome if transpose is not provided as argument
-if transpose == False:
-    text.columns = ['litigantType', 'values']
-    return pd.DataFrame(text)
-else:
-    text = text.T
-    text.columns = text.iloc[0]
-    return pd.DataFrame(text[1:])
+# return outcome 
+return text
+
+
 
 
 

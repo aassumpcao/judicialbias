@@ -42,7 +42,7 @@ class scraper:
     classSCT = 'Procedimento do Juizado Especial Cível'
     java     = 'return document.getElementsByTagName("html")[0].innerHTML'
     
-    # init method share by all class instances
+    # init method shared by all class instances
     def __init__(self, browser):
         """load into class the browser"""
         
@@ -53,7 +53,6 @@ class scraper:
     def case(self, name):
         """method to narrow in on sct cases from list of cases"""
         
-        # search parameters
         # store politician's name in class object
         self.name = name
 
@@ -152,7 +151,6 @@ class scraper:
     def decision(self, number):
         """method to download case decisions by candidate information"""
         
-        # search parameters
         # store case number in class object
         self.number = number
 
@@ -218,6 +216,8 @@ class parser:
     methods:
         parse_summary:      parse summary table
         parse_litigants:    parse litigants table
+        parse_updates:      parse case updates
+        parse_petitions:    parse petitions information
 
     """
 
@@ -233,7 +233,8 @@ class parser:
     regex4 = re.compile(' +')
     regex5 = re.compile('(?<= )([a-z]+:)', re.IGNORECASE)
     regex6 = re.compile('[a-z]+')
-
+    regex7 = re.compile('([0-9]{2}/[0-9]{2}/[0-9]{4})')
+    regex8 = re.compile('(.)+')
     
     # init method shared by all class instances
     def __init__(self, file):
@@ -288,7 +289,7 @@ class parser:
         # find litigants table
         table = self.soup.find('table', {'id': 'tablePartesPrincipais'})
 
-        # find text in reach row
+        # find text in each row
         text = [row.text for row in \
                 table.find_all('tr', {'class': 'fundoClaro'})]
 
@@ -322,8 +323,40 @@ class parser:
             return pd.DataFrame(text[1:])
 
     #3 parse updates
-    def parse_updates(self, transpose = False):
+    def parse_updates(self):
+        """method to wrangle update information"""
+
+        # find updates table
+        table = self.soup.find('tbody', {'id': 'tabelaTodasMovimentacoes'})
+
+        # find text in each row
+        text = [row.text for row in table.find_all('tr', {'style': ''})]
+
+        # clean up string
+        text = [re.sub(self.regex0, '', i) for i in text]
+        text = [re.sub(self.regex2, '', i) for i in text]
+        text = [re.sub(self.regex4,' ', i) for i in text]
+
+        # split variables, flatten list, trim space, and extract unique values
+        text = [re.split(self.regex7, i, maxsplit = 1) for i in text]
+        flat = [i for j in text for i in j]
+        flat = [i.strip() for i in flat]
+        flat = list(filter(self.regex8.search, flat))
+
+        # created nested list of litigant categories and their names
+        text = [flat[i:i + 2] for i in range(0, len(flat), 2)]
+
+        # transform to pd dataset
+        text = pd.DataFrame(text)
+        text.columns = ['updates', 'values']
+
+        # return outcome 
+        return text
+
+    #4 parse petitions
+    def parse_petitions(self):
 
         pass
+
 
 
