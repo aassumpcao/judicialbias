@@ -21,6 +21,7 @@ import re
 import time
 import math
 import importlib
+import random
 
 # import scraper module
 import tjsp
@@ -51,7 +52,7 @@ browser.implicitly_wait(10)
 lawsuit = []
 
 # download case numbers
-for x in range(len(candidates[:9])):
+for x in range(len(candidates)):
     
     # define search
     name   = '\"' + candidates.iloc[x, 0] + '\"'
@@ -67,7 +68,7 @@ for x in range(len(candidates[:9])):
     lawsuit.extend(cases)
 
     # print warning every 10 iterations
-    if x % 10 == 0: print(str(x) + ' / ' + str(len(candidates)) + ' completed')
+    if x % 10 == 0: print(str(x + 1) + ' / ' + str(len(candidates)))
 
 # create pandas dataset from list
 lawsuits = pd.DataFrame(lawsuit)
@@ -79,4 +80,4 @@ feather.write_dataframe(lawsuits, 'lawsuits.feather')
 # quit browser
 browser.quit()
 
-candidates.iloc[:10,]
+

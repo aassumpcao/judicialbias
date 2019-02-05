@@ -92,7 +92,7 @@ class scraper:
             classbox.send_keys(Keys.TAB)
 
             # find submit button and click it to search cases
-            time.sleep(1)
+            time.sleep(.5)
             self.browser.find_element_by_xpath(sbtpath).click()
 
             # force wait before information is loaded

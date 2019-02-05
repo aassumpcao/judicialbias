@@ -27,6 +27,7 @@ from bs4 import BeautifulSoup
 os.chdir('/Users/aassumpcao/OneDrive - University of North Carolina ' +
   'at Chapel Hill/Documents/Research/2020 Dissertation/2019 Judicial Bias')
 
+
 # define chrome options
 CHROME_PATH      ='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 CHROMEDRIVER_PATH='/usr/local/bin/chromedriver'
@@ -37,13 +38,13 @@ chrome_options = Options()
 chrome_options.add_argument('--headless')
 chrome_options.add_argument('--window-size=%s' % WINDOW_SIZE)
 chrome_options.binary_location = CHROME_PATH
-browser.implicitly_wait(60)
 
-chrome_options = Options()
-chrome_options.binary_location = CHROME_PATH
 # open invisible browser
-browser = webdriver.Chrome(executable_path = CHROMEDRIVER_PATH)
+browser = webdriver.Chrome(executable_path = CHROMEDRIVER_PATH, \
+                           options = chrome_options)
+
 # set implicit wait for page load
+browser.implicitly_wait(10)
 
 # tests ok!
 tjsp.scraper(browser).case('"Fernando Holiday"')
@@ -103,3 +104,31 @@ text.columns = ['dates', 'hearing', 'status', 'attendees']
 
 # problem for summary parser
 '1000570-26.2018.8.26.0361'
+
+randomlist = random.sample(list(lawsuits['caseID']), 3)
+
+# test random list
+randomlist = [re.sub('-|\\.', '', i) for i in randomlist]
+
+# actual random list
+randomlist = ['10326328020158260602', '00691248420118260002', '00056093620158260002']
+
+tjsp.scraper(browser).decision(randomlist[0])
+tjsp.scraper(browser).decision(randomlist[1])
+tjsp.scraper(browser).decision(randomlist[2])
+tjsp.scraper(browser).decision('10005702620188260361')
+
+files = ['sct' + i + '.html' for i in randomlist]
+
+# tests ok!
+tjsp.parser(files[0]).parse_summary()
+tjsp.parser(files[1]).parse_summary()
+tjsp.parser(files[2]).parse_summary()
+tjsp.parser('sct10005702620188260361.html').parse_litigants()
+
+# testing
+tjsp.parser(files[0]).parse_litigants()
+tjsp.parser(files[1]).parse_litigants()
+tjsp.parser(files[2]).parse_litigants()
+
+browser.quit()
