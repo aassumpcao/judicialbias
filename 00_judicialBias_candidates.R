@@ -1,12 +1,8 @@
 ################################################################################
-# electoral crime paper
+# judicial bias paper
 # candidates wrangling
 
-# this script narrows down the database of candidates who had their candidacies
-# appealed before the elections but have not heard back before election date.
-# after it filters down candidates, it prepares the data for the tse case
-# scraper, which is a program that visits each candidate's website at tse and
-# downloads the case and protocol number for all their candidacies.
+# (tbd)
 
 # by andre.assumpcao@gmail.com
 
@@ -15,6 +11,7 @@ library(here)
 library(tidyverse)
 library(magrittr)
 library(stargazer)
+library(feather)
 
 # load statements
 load('../2019 Electoral Crime/candidates.2010.Rda')
@@ -165,6 +162,13 @@ set.seed(12345)
 candidates$candidate.plaintiff <- rbinom(nrow(candidates), 1, .5)
 candidates$trial.outcome       <- rbinom(nrow(candidates), 1, .5)
 
+# create new id for each candidate
+candidates %<>% mutate(scraper.id = row_number())
+
+# save dataset
+save(candidates, file = 'candidatesSP.Rda')
+write_feather(candidates, 'candidateSP.feather')
+
 # remove unnecessary objects
 rm(list = objects(pattern = '[0-9]|politicians'))
 
@@ -190,7 +194,7 @@ dir.create('./proposal2')
 stargazer(
 
   # summmary table
-  candidates[, c(variables, outcomes)] %>%
+  candidates[, c(variables)] %>%
   mutate(candidacy.expenditures = log(candidacy.expenditures + 1)) %>%
   as.data.frame(),
 

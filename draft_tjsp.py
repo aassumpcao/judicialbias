@@ -101,5 +101,5 @@ text = [text[i:i + 4] for i in range(0, len(text), 4)]
 text = pd.DataFrame(text)
 text.columns = ['dates', 'hearing', 'status', 'attendees']
 
-# return outcome 
-return text
+# problem for summary parser
+'1000570-26.2018.8.26.0361'

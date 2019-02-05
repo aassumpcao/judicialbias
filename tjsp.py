@@ -105,7 +105,7 @@ class scraper:
             total = re.search(regex0, searched)
 
             # exit if no cases are found
-            if total == None: return 'No cases found for ' + self.name + '.'       
+            if total == None: return 'Nothing found'       
             
             # else determine the number of pages containing all cases
             total = re.search(regex0, searched)[0]

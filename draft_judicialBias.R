@@ -46,3 +46,10 @@ candidates2016 <- filter(candidates.2016, ANO_ELEICAO == 2016)
 candidates2008 %$% table(DESCRICAO_SEXO, CODIGO_SEXO)
 
 candidates %$% table(candidacy.expenditures, election.year)
+
+library(tidyverse)
+library(magrittr)
+library(feather)
+
+# load to file
+lawsuits <- read_feather('lawsuits.feather')
