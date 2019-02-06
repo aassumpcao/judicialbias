@@ -25,7 +25,7 @@ import random
 
 # import scraper module
 import tjsp
-# importlib.reload(tjsp)
+importlib.reload(tjsp)
 
 # import test dataset with 500 elected politicians
 candidates = feather.read_dataframe('trialRun.feather')

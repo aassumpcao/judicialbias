@@ -21,12 +21,10 @@ from bs4 import BeautifulSoup
 # from selenium.webdriver.support.ui     import WebDriverWait
 # from selenium.webdriver.support        import expected_conditions as EC
 
-
 # initial options
 # set working dir
 os.chdir('/Users/aassumpcao/OneDrive - University of North Carolina ' +
   'at Chapel Hill/Documents/Research/2020 Dissertation/2019 Judicial Bias')
-
 
 # define chrome options
 CHROME_PATH      ='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
@@ -83,13 +81,6 @@ table = soup.find_all('table', {'style': 'margin-left:15px; margin-top:1px;'})[5
 head = [row.text for row in table.find_all('th')]
 body = [td.text for tr in table.find_all('tr')[1:] for td in tr.find_all('td')]
 
-
-
-# body = []
-# for tr in table.find_all('tr')[1:]:
-#     for td in tr.find_all('td'):
-#         body.append(td.text)
-
 # clean up string
 text = [re.sub(regex0, '', i) for i in body]
 text = list(filter(regex8.search, text))
@@ -124,7 +115,7 @@ files = ['sct' + i + '.html' for i in randomlist]
 tjsp.parser(files[0]).parse_summary()
 tjsp.parser(files[1]).parse_summary()
 tjsp.parser(files[2]).parse_summary()
-tjsp.parser('sct10005702620188260361.html').parse_litigants()
+
 
 # testing
 tjsp.parser(files[0]).parse_litigants()
@@ -132,3 +123,10 @@ tjsp.parser(files[1]).parse_litigants()
 tjsp.parser(files[2]).parse_litigants()
 
 browser.quit()
+
+### TO-DO: fix parser when litigants don't have lawyers. Example below:
+file0 = 'sct10005702620188260361.html' # working
+file1 = 'sct00691248420118260002.html' # not working
+
+tjsp.parser(file0).parse_litigants()
+tjsp.parser(file1).parse_litigants()

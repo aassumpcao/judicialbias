@@ -235,7 +235,7 @@ class parser:
     regex3 = re.compile(r':', re.IGNORECASE)
     regex4 = re.compile(' +')
     regex5 = re.compile('(?<= )([a-z]+:)', re.IGNORECASE)
-    regex6 = re.compile('[a-z]+')
+    regex6 = re.compile('[a-zA-Z]+')
     regex7 = re.compile('([0-9]{2}/[0-9]{2}/[0-9]{4})')
     regex8 = re.compile('(.)+')
     
@@ -301,7 +301,7 @@ class parser:
         text = [re.sub(self.regex2, '', i) for i in text]
         text = [re.sub(self.regex4,' ', i) for i in text]
 
-        # split variable names and contents.t
+        # split variable names and contents.
         text = [re.split(self.regex5, i) for i in text]
 
         # flatten list, trim whitespace, replace ':', and delete empty strings
