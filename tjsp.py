@@ -6,11 +6,15 @@
 # import statements
 import codecs
 import glob
+import math
+import numpy as np
+import os
 import pandas as pd
 import re
-import os
+import re
+import time
 from bs4 import BeautifulSoup
-from selenium import webdriver
+from selenium                          import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions        import TimeoutException
 from selenium.common.exceptions        import StaleElementReferenceException
@@ -18,10 +22,7 @@ from selenium.webdriver.common.by      import By
 from selenium.webdriver.common.keys    import Keys
 from selenium.webdriver.support.ui     import WebDriverWait
 from selenium.webdriver.support        import expected_conditions as EC
-import numpy as np
-import time
-import re
-import math
+
 
 # define scraper class
 class scraper:
@@ -234,7 +235,7 @@ class parser:
     regex2 = re.compile(r'\xa0')
     regex3 = re.compile(r':', re.IGNORECASE)
     regex4 = re.compile(' +')
-    regex5 = re.compile('(?<= )([a-z]+:)', re.IGNORECASE)
+    regex5 = re.compile('(?<= )([a-zA-Z]+:)', re.IGNORECASE)
     regex6 = re.compile('[a-zA-Z]+')
     regex7 = re.compile('([0-9]{2}/[0-9]{2}/[0-9]{4})')
     regex8 = re.compile('(.)+')

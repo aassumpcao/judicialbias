@@ -12,23 +12,20 @@ from selenium.webdriver.common.by      import By
 from selenium.webdriver.common.keys    import Keys
 from selenium.webdriver.support.ui     import WebDriverWait
 from selenium.webdriver.support        import expected_conditions as EC
+import codecs
 import feather
 import glob
+import math
 import numpy as np
 import os
 import pandas as pd
 import re
 import time
-import math
+import tjsp # import scraper module
 import importlib
-import random
 
-# import scraper module
-import tjsp
+# # reload module if necessary
 importlib.reload(tjsp)
-
-# import test dataset with 500 elected politicians
-candidates = feather.read_dataframe('trialRun.feather')
 
 # define chrome options
 CHROME_PATH      ='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
@@ -51,33 +48,35 @@ browser.implicitly_wait(10)
 # create empty list
 lawsuit = []
 
+# import test dataset with all elected politicians
+candidates = feather.read_dataframe('candidatesUnique.feather')[2000:8000]
+
 # download case numbers
 for x in range(len(candidates)):
-    
+
     # define search
     name   = '\"' + candidates.iloc[x, 0] + '\"'
     candid = candidates.iloc[x, 1]
-    
+
     # scrape numbers, save to object, and make candid of same length
     case   = tjsp.scraper(browser).case(name)
-    candid = [candid] * len(case) if isinstance(case,str) == False else [candid]
+    candid = [candid] * len(case) if not isinstance(case, str) else [candid]
+
     # join cases and candidate ids together
     cases = list(zip(case, candid))
-    
+
     # bind at the end of lawsuit dataset
     lawsuit.extend(cases)
 
     # print warning every 10 iterations
-    if x % 10 == 0: print(str(x + 1) + ' / ' + str(len(candidates)))
+    if (x + 1) % 10 == 0: print(str(x + 1) + ' / ' + str(len(candidates)))
 
 # create pandas dataset from list
 lawsuits = pd.DataFrame(lawsuit)
 lawsuits.columns = ['caseID', 'candidateID']
 
 # save to disk
-feather.write_dataframe(lawsuits, 'lawsuits.feather')
+feather.write_dataframe(lawsuits, 'lawsuits8000.feather')
 
-# quit browser
+# quit loop at the end
 browser.quit()
-
-

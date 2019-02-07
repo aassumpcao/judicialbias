@@ -26,5 +26,9 @@ trialRun <- sample_n(candidates, 500)
 write_feather(trialRun, 'trialRun.feather')
 save(trialRun, file = 'trialRun.Rda')
 
+# create final dataset
+write_feather(candidates, 'candidatesUnique.feather')
+save(candidates, file = 'candidatesUnique.Rda')
+
 # quit R
 q('no')
