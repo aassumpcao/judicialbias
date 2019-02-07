@@ -49,7 +49,7 @@ browser.implicitly_wait(10)
 lawsuit = []
 
 # import test dataset with all elected politicians
-candidates = feather.read_dataframe('candidatesUnique.feather')[2000:8000]
+candidates = feather.read_dataframe('candidatesUnique.feather')[8000:9000]
 
 # download case numbers
 for x in range(len(candidates)):
@@ -76,7 +76,7 @@ lawsuits = pd.DataFrame(lawsuit)
 lawsuits.columns = ['caseID', 'candidateID']
 
 # save to disk
-feather.write_dataframe(lawsuits, 'lawsuits8000.feather')
+feather.write_dataframe(lawsuits, 'lawsuits9000.feather')
 
 # quit loop at the end
 browser.quit()
