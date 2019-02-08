@@ -58,11 +58,16 @@ load('candidatesUnique.Rda')
 nrow(candidatesSP)
 nrow(candidatesUnique)
 
-candidateCPF <- candidatesSP %>%
-  select(candidateCPF = candidate.ssn, scraperID = scraper.id)
+candidateCPF <- candidatesSP %>% select(candidateCPF = candidate.ssn,
+                                        scraperID = scraper.id,
+                                        munID = election.ID)
 
 write_feather(candidateCPF, 'candidateCPF.feather')
 
 install.packages('peticoesTJSP-master', repos = NULL, type = 'source')
 
 peticoesTJSP::download_documents('00116417520158260481', '.', only_petitions = TRUE)
+
+vacancies2016 %>%
+  filter(SG_UF == 'SP') %>%
+  filter(SG_UE == '61018') %>% .[1,] %>% unlist()

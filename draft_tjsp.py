@@ -141,6 +141,8 @@ tjsp.parser(file1).parse_litigants()
 # # write to disk
 # feather.write_dataframe(data, 'lawsuits.feather')
 
+import feather
+
 # load data onto python session
 lawsuits = feather.read_dataframe('lawsuits.feather')
 candidateCPF = feather.read_dataframe('candidateCPF.feather')
@@ -160,8 +162,5 @@ lawsuits = pd.merge(lawsuits, candidateCPF, how = 'left', \
 # drop scraperID
 lawsuits = lawsuits.drop('scraperID', axis = 1)
 lawsuits.dtypes
-
-# save dataset including cpf
-feather.write_dataframe(lawsuits, 'lawsuitsCPF.feather')
 
 
