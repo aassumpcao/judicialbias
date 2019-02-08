@@ -1,4 +1,7 @@
-### tj-sp wrangling cases
+### tj-sp cases wrangling
+# this script joins case, judicial district, and politician data together
+#   the goal is to filter down the list of lawsuits to lawsuits filed in the
+#   municipality in which politicians have been elected to office
 # developed by
 # Andre Assumpcao
 # andre.assumpcao@gmail.com
