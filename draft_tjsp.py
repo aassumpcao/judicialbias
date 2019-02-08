@@ -11,6 +11,7 @@ import re
 import math
 import importlib
 import tjsp
+import feather
 from bs4 import BeautifulSoup
 # from selenium                          import webdriver
 # from selenium.webdriver.chrome.options import Options
@@ -130,3 +131,37 @@ file1 = 'sct00691248420118260002.html' # not working
 
 tjsp.parser(file0).parse_litigants()
 tjsp.parser(file1).parse_litigants()
+
+# load data from different iterations
+# data = [feather.read_dataframe(i) for i in glob.glob('./lawsuits*')]
+
+# concatenate elements in data
+# data = pd.concat(data)
+
+# # write to disk
+# feather.write_dataframe(data, 'lawsuits.feather')
+
+# load data onto python session
+lawsuits = feather.read_dataframe('lawsuits.feather')
+candidateCPF = feather.read_dataframe('candidateCPF.feather')
+
+# sort values by candidateID
+lawsuits = lawsuits.sort_values('candidateID')
+
+# filter only candidates who have SCT cases
+lawsuits = lawsuits[lawsuits['caseID'] != 'N']
+
+# drop duplicates
+lawsuits = lawsuits.drop_duplicates()
+
+# join on scraperID and pull CPF
+lawsuits = pd.merge(lawsuits, candidateCPF, how = 'left', \
+                    left_on = 'candidateID', right_on = 'scraperID')
+# drop scraperID
+lawsuits = lawsuits.drop('scraperID', axis = 1)
+lawsuits.dtypes
+
+# save dataset including cpf
+feather.write_dataframe(lawsuits, 'lawsuitsCPF.feather')
+
+

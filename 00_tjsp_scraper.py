@@ -49,7 +49,7 @@ browser.implicitly_wait(10)
 lawsuit = []
 
 # import test dataset with all elected politicians
-candidates = feather.read_dataframe('candidatesUnique.feather')[8000:9000]
+candidates = feather.read_dataframe('candidatesUnique.feather')
 
 # download case numbers
 for x in range(len(candidates)):
@@ -71,12 +71,23 @@ for x in range(len(candidates)):
     # print warning every 10 iterations
     if (x + 1) % 10 == 0: print(str(x + 1) + ' / ' + str(len(candidates)))
 
+# quit loop at the end
+browser.quit()
+
 # create pandas dataset from list
 lawsuits = pd.DataFrame(lawsuit)
 lawsuits.columns = ['caseID', 'candidateID']
 
-# save to disk
-feather.write_dataframe(lawsuits, 'lawsuits9000.feather')
+# sort values by candidateID
+lawsuits = lawsuits.sort_values('candidateID')
 
-# quit loop at the end
-browser.quit()
+# filter only candidates who have SCT cases
+lawsuits = lawsuits[lawsuits['caseID'] != 'N']
+
+# drop duplicates
+lawsuits = lawsuits.drop_duplicates()
+
+# save to disk
+feather.write_dataframe(lawsuits, 'lawsuits1.feather')
+
+

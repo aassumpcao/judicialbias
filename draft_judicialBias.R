@@ -52,4 +52,17 @@ library(magrittr)
 library(feather)
 
 # load to file
-lawsuits <- read_feather('lawsuits.feather')
+load('candidatesSP.Rda')
+load('candidatesUnique.Rda')
+
+nrow(candidatesSP)
+nrow(candidatesUnique)
+
+candidateCPF <- candidatesSP %>%
+  select(candidateCPF = candidate.ssn, scraperID = scraper.id)
+
+write_feather(candidateCPF, 'candidateCPF.feather')
+
+install.packages('peticoesTJSP-master', repos = NULL, type = 'source')
+
+peticoesTJSP::download_documents('00116417520158260481', '.', only_petitions = TRUE)
