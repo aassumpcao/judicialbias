@@ -28,9 +28,9 @@ import importlib
 importlib.reload(tjsp)
 
 # define chrome options
-CHROME_PATH      ='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-CHROMEDRIVER_PATH='/usr/local/bin/chromedriver'
-WINDOW_SIZE      ='1920,1080'
+CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+WINDOW_SIZE = '1920,1080'
+CHROMEDRIVER_PATH = '/usr/local/bin/chromedriver'
 
 # set options
 chrome_options = Options()

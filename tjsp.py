@@ -27,14 +27,14 @@ from selenium.webdriver.support        import expected_conditions as EC
 # define scraper class
 class scraper:
     """series of methods to download case documents from tj-sp
-        
+
     attributes:
         browser:    placeholder for selenium browser call
-    
+
     methods:
         case:       download case number by name (only SCT class for now)
         decision:   use case number to download judicial decision
-    
+
     """
     # initial arguments (for both esaj website and browser)
     browser  = []
@@ -42,18 +42,18 @@ class scraper:
     urldec   = 'https://esaj.tjsp.jus.br/cpopg/open.do'
     classSCT = 'Procedimento do Juizado Especial Cível'
     java     = 'return document.getElementsByTagName("html")[0].innerHTML'
-    
+
     # init method shared by all class instances
     def __init__(self, browser):
         """load into class the browser"""
-        
+
         # store browser info
         self.browser = browser
 
     # case number scraper function (only available for special civil tribunals)
     def case(self, name):
         """method to narrow in on sct cases from list of cases"""
-        
+
         # store politician's name in class object
         self.name = name
 
@@ -64,7 +64,7 @@ class scraper:
         nameid  = 'iddadosConsulta.pesquisaLivre'
         classid = 'classe_selectionText'
 
-        # click to search 
+        # click to search
         sbtpath = '//*[(@id = "pbSubmit")]'
 
         # find search results
@@ -76,7 +76,7 @@ class scraper:
         # fint total number of cases in all pages and extract it
         regex0 = re.compile('(?<=de )[0-9]+', re.IGNORECASE)
         regex1 = re.compile('[0-9]+', re.IGNORECASE)
-        
+
         # find next page button
         nextpage = '//*[@title = "Próxima página"]'
 
@@ -106,8 +106,8 @@ class scraper:
             total = re.search(regex0, searched)
 
             # exit if no cases are found
-            if total == None: return 'Nothing found'       
-            
+            if not total: return 'Nothing found'
+
             # else determine the number of pages containing all cases
             total = re.search(regex0, searched)[0]
             pages = math.ceil(int(total) / 10)
@@ -115,7 +115,7 @@ class scraper:
             # find all individual case numbers in first page and extract them
             casenumbers = self.browser.find_elements_by_xpath(numbers)
             casenumbers = [x.text for x in casenumbers[:10]]
-            
+
             # run loop if there are multiple pages
             if pages > 1:
                 # for loop to construct list of case numbers in other pages
@@ -141,7 +141,7 @@ class scraper:
     # # case number scraper function
     # def case(self, name):
     #     """method to download any case number by candidate information"""
-        
+
     #     # search parameters
     #     # not available
 
@@ -151,7 +151,7 @@ class scraper:
     # sct case decisions scraper function
     def decision(self, number):
         """method to download case decisions by candidate information"""
-        
+
         # store case number in class object
         self.number = number
 
@@ -239,11 +239,11 @@ class parser:
     regex6 = re.compile('[a-zA-Z]+')
     regex7 = re.compile('([0-9]{2}/[0-9]{2}/[0-9]{4})')
     regex8 = re.compile('(.)+')
-    
+
     # init method shared by all class instances
     def __init__(self, file):
         """load into class the file which will be parsed"""
-        
+
         # try utf-8 encoding first or cp1252 if loading fails
         try:
             self.file = codecs.open(file, 'r', 'utf-8').read()
@@ -289,7 +289,7 @@ class parser:
     #2 parse litigants
     def parse_litigants(self, transpose = False):
         """method to parse litigant information"""
-        
+
         # find litigants table
         table = self.soup.find('table', {'id': 'tablePartesPrincipais'})
 
@@ -354,7 +354,7 @@ class parser:
         text = pd.DataFrame(text)
         text.columns = ['updates', 'values']
 
-        # return outcome 
+        # return outcome
         return text
 
     #4 parse petitions
@@ -388,7 +388,7 @@ class parser:
         text = pd.DataFrame(text)
         text.columns = ['dates', 'values']
 
-        # return outcome 
+        # return outcome
         return text
 
     #5 parse incidental information
@@ -424,7 +424,7 @@ class parser:
         text = pd.DataFrame(text)
         text.columns = ['dates', 'hearing', 'status', 'attendees']
 
-        # return outcome 
+        # return outcome
         return text
 
 
