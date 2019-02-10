@@ -32,7 +32,7 @@ class scraper:
         browser:    placeholder for selenium browser call
 
     methods:
-        case:       download case number by name (only SCT class for now)
+        case:       download case number by name (only SCTs for now)
         decision:   use case number to download judicial decision
 
     """
@@ -112,13 +112,13 @@ class scraper:
             total = re.search(regex0, searched)[0]
             pages = math.ceil(int(total) / 10)
 
-            # find all individual case numbers in first page and extract them
+            # find and extract all individual case numbers in first page
             casenumbers = self.browser.find_elements_by_xpath(numbers)
             casenumbers = [x.text for x in casenumbers[:10]]
 
             # run loop if there are multiple pages
             if pages > 1:
-                # for loop to construct list of case numbers in other pages
+                # loop constructing list of case numbers in other pages
                 for i in range(pages - 1):
                     if not i == pages - 1:
                         # click to advance pages except for last page
@@ -167,7 +167,7 @@ class scraper:
 
         # try catch for handling cases not available in online database
         try:
-            # find 'case number' text box and send individual case number
+            # find 'case number' text box and type individual number
             numberbox = self.browser.find_element_by_id(numberid)
             numberbox.send_keys(str(self.number[0:13]))
             numberbox.send_keys(str(self.number[16:20]))
@@ -176,12 +176,12 @@ class scraper:
             # find submit button and click it to search cases
             self.browser.find_element_by_xpath(sbtpath).click()
 
-            # counter used in while loop when waiting for elements to be loaded
+            # counter for when waiting for elements to be loaded
             counter = 1
 
             # while loop to test whether elements are loaded
             while counter < 7:
-                # check if elements are visible in first page and wait if not
+                # check and wait if els are not visible in first page
                 if len(self.browser.find_elements_by_xpath(check)) == 1:
                     time.sleep(5)
                     counter += 1
@@ -239,6 +239,7 @@ class parser:
     regex6 = re.compile('[a-zA-Z]+')
     regex7 = re.compile('([0-9]{2}/[0-9]{2}/[0-9]{4})')
     regex8 = re.compile('(.)+')
+    regex9 = re.compile('Reqte(s)?|Reqd[oa]')
 
     # init method shared by all class instances
     def __init__(self, file):

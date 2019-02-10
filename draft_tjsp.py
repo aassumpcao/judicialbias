@@ -164,3 +164,57 @@ lawsuits = lawsuits.drop('scraperID', axis = 1)
 lawsuits.dtypes
 
 
+import tjsp
+
+file = tjsp.parser(files[3567])
+file.soup
+
+# find litigants table
+table = file.soup.find('table', {'id': 'tablePartesPrincipais'})
+
+# find text in each row
+text = [row.text for row in \
+        table.find_all('tr', {'class': 'fundoClaro'})]
+
+# clean up string
+text = [re.sub(regex0,' ', i) for i in text]
+text = [re.sub(regex2, '', i) for i in text]
+text = [re.sub(regex4,' ', i) for i in text]
+
+# split variable names and contents.
+text = [re.split(regex5, i) for i in text]
+
+# flatten list, trim whitespace, replace ':', and delete empty strings
+flat = [i for j in text for i in j]
+flat = [i.strip() for i in flat]
+flat = [re.sub(':', '', i) for i in flat]
+flat = list(filter(regex6.search, flat))
+
+# slice claimant and plaintiff info
+indices   = [i for i, word in enumerate(flat) if re.search(regex9, word)]
+claimant  = [flat[i:i + 2] for i in range(indices[0], indices[1], 2)]
+plaintiff = [flat[i:i + 2] for i in range(indices[1], len(flat), 2)]
+
+# flatten lists
+claimant  = [i for j in claimant for i in j]
+plaintiff = [i for j in plaintiff for i in j]
+
+litigants = [claimant, plaintiff]
+
+pd.DataFrame([claimant, plaintiff])
+
+
+
+
+
+# transform to pd dataset
+text = pd.DataFrame(text)
+
+# return outcome if transpose is not provided as argument
+if transpose == False:
+    text.columns = ['parts', 'values']
+    return pd.DataFrame(text)
+else:
+    text = text.T
+    text.columns = text.iloc[0]
+    return pd.DataFrame(text[1:])

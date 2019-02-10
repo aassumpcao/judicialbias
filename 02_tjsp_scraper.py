@@ -1,4 +1,8 @@
 ### tjsp sct case decision scraper
+# this script downloads the case information for all small claims cases
+#   involving politicians in the state court of são paulo since 2008.
+#   each case information is downloaded to disk as an html file, which
+#   then needs to be parsed into quantitative data.
 # developed by:
 # andre assumpcao
 # andre.assumpcao@gmail.com
@@ -48,18 +52,21 @@ browser = webdriver.Chrome(executable_path = CHROMEDRIVER_PATH,
 browser.implicitly_wait(10)
 
 # import test dataset with all elected politicians
-sct = pd.read_csv('../sct.csv', index_col = 0, dtype = str)
+sct = pd.read_csv('sct.csv', index_col = 0, dtype = str)
 
 # format case number dropping '-' and '.' and making it a list
 key = [re.sub('-|\\.', '', i) for i in list(sct['caseID'])]
+
+# prepare values for dictionary and build dictionary
 value = list(sct['candidateID'])
 cases = dict(zip(key, value))
+limit = len(cases)
 
 # create folder for html files
 if not os.path.exists('./html'):
   os.mkdir('./html')
 
-# change working directory
+# change directory for download
 os.chdir('./html')
 
 # download sct cases
@@ -77,7 +84,7 @@ for i, (number, person) in enumerate(cases.items()):
     os.rename(file, newname)
 
     # print warning every 10 iterations
-    if (i + 1) % 10 == 0: print(str(i + 1) + ' / ' + str(len(i)))
+    if (i + 1) % 10 == 0: print(str(i + 1) + ' / ' + str(limit))
 
 # quit browser
 browser.quit()
