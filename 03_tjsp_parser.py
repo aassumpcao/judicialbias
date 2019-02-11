@@ -121,24 +121,22 @@ for i, file in zip(range(limit), files):
     try:
         # load each file
         litigant = tjsp.parser(file).parse_litigants(transpose = True)
+        # append cases and candidate information
+        litigant['caseID'] = cases[i]
+        litigant['candidateID'] = people[i]
         # append to litigants list
         litigants.append(litigant)
     # create list of errors
     except:
-        errors.append(file)
+        errors2.append(file)
     # print warning every 100 iterations
     if (i + 1) % 100 == 0: print(str(i + 1) + ' / ' + str(limit))
 
-# # check errors
-# len(errors)
+# check errors
+len(errors)
 
 # # write to file
 # codecs.open('litigantsProblems.txt', 'w', 'utf-8').write(errors)
 
 # build dataset from list
 litigants = pd.concat(litigants, ignore_index = True, sort = False)
-
-# merge caseID and candidateID
-litigants['caseID'] = cases
-litigants['candidateID'] = people
-

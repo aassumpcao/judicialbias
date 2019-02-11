@@ -235,11 +235,14 @@ class parser:
     regex2 = re.compile(r'\xa0')
     regex3 = re.compile(r':', re.IGNORECASE)
     regex4 = re.compile(' +')
-    regex5 = re.compile('(?<= )([a-zA-Z]+:)', re.IGNORECASE)
+    regex5 = re.compile('(?<= )([a-zA-Zé\\.]+:)', re.IGNORECASE)
     regex6 = re.compile('[a-zA-Z]+')
     regex7 = re.compile('([0-9]{2}/[0-9]{2}/[0-9]{4})')
     regex8 = re.compile('(.)+')
-    regex9 = re.compile('Reqte(s)?|Reqd[oa]')
+    regex9 = re.compile('Reqte|Autor|Exeqte|Imptte|Embargte|Reclamante',
+                        re.IGNORECASE)
+    regex10 = re.compile('Reqd[ao]|Exectd[ao]|Imptd[ao]|Réu|Embargd[ao]|' +
+                         'Reclamad[ao]', re.IGNORECASE)
 
     # init method shared by all class instances
     def __init__(self, file):
@@ -312,20 +315,65 @@ class parser:
         flat = [re.sub(':', '', i) for i in flat]
         flat = list(filter(self.regex6.search, flat))
 
-        # created nested list of litigant categories and their names
-        text = [flat[i:i + 2] for i in range(0, len(flat), 2)]
+        # initiate dictionary with case litigants
+        litigants = {'claimant': None, 'plaintiff': None,
+                     'clawyers': None, 'plawyers': None}
 
-        # transform to pd dataset
-        text = pd.DataFrame(text)
+        # produce claimant list
+        claimantNames = [flat[i + 1] for i, word in enumerate(flat) if \
+                         re.search(self.regex9, word)]
+
+        # assign to dictionary
+        litigants['claimant'] = claimantNames \
+                                if not len(claimantNames) == 0 else ''
+
+        # produce plaintiff list
+        plaintiffNames = [flat[i + 1] for i, word in enumerate(flat) if \
+                          re.search(self.regex10, word)]
+
+        # assign to dictionary
+        litigants['plaintiff'] = plaintiffNames \
+                                 if not len(plaintiffNames) == 0 else ''
+
+        # create indexes for claimant and plaintiff information
+        index0 = [i if re.search(self.regex9, word) else len(flat) \
+                  for i, word in enumerate(flat)]
+        index1 = [i if re.search(self.regex10,word) else len(flat) \
+                  for i, word in enumerate(flat)]
+        indexes = [index0[0], index1[0]]
+
+        # then use the indexes to identify lawyers for each litigant
+        lawyer0 = ';'.join(flat[3:indexes[1]:2])
+        lawyer1 = ';'.join(flat[indexes[1] + 3::2])
+
+        # assign lawyers to claimants and plaintiffs
+        if re.search(self.regex9, flat[indexes[0]]):
+            litigants['clawyers'] = lawyer0
+            litigants['plawyers'] = lawyer1
+        else:
+            litigants['clawyers'] = lawyer1
+            litigants['plawyers'] = lawyer0
+
+        # check if claimant and plaintiffs are of the same length
+        nrow = max(len(litigants['claimant']), len(litigants['plaintiff']))
+
+        # define the number of observations and fill missing
+        litigants['claimant'] = litigants['claimant'] * nrow if \
+            nrow is not len(litigants['claimant']) else litigants['claimant']
+        litigants['plaintiff'] = litigants['plaintiff'] * nrow if \
+            nrow is not len(litigants['plaintiff']) else litigants['plaintiff']
+
+        # make dictionary a pd dataframe
+        text = pd.DataFrame.from_dict(litigants)
 
         # return outcome if transpose is not provided as argument
         if transpose == False:
-            text.columns = ['parts', 'values']
-            return pd.DataFrame(text)
+            text = text.transpose().reset_index()
+            text.columns = ['parts'] + ['names' + str(i + 1) for i in \
+                            range(text.shape[1] - 1)]
+            return text
         else:
-            text = text.T
-            text.columns = text.iloc[0]
-            return pd.DataFrame(text[1:])
+            return text
 
     #3 parse updates
     def parse_updates(self):

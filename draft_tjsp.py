@@ -64,7 +64,9 @@ tjsp.parser(file).parse_petitions()
 tjsp.parser(file).parse_hearings()
 
 # testing
+os.chdir('..')
 importlib.reload(tjsp)
+os.chdir('./html')
 
 file = 'sct10092683820178260011.html'
 file = 'sct00085892420138260002.html'
@@ -163,14 +165,39 @@ lawsuits = pd.merge(lawsuits, candidateCPF, how = 'left', \
 lawsuits = lawsuits.drop('scraperID', axis = 1)
 lawsuits.dtypes
 
+regex0 = re.compile(r'\n|\t')
+regex1 = re.compile(r'\\n|\\t')
+regex2 = re.compile(r'\xa0')
+regex3 = re.compile(r':', re.IGNORECASE)
+regex4 = re.compile(' +')
+regex5 = re.compile('(?<= )([a-zA-Zé\\.]+:)', re.IGNORECASE)
+regex6 = re.compile('[a-zA-Z]+')
+regex7 = re.compile('([0-9]{2}/[0-9]{2}/[0-9]{4})')
+regex8 = re.compile('(.)+')
+regex9 = re.compile('Reqte|Autor|Exeqte|Imptte|Embargte|Reclamante',
+                    re.IGNORECASE)
+regex10 = re.compile('Reqd[ao]|Exectd[ao]|Imptd[ao]|Réu|Embargd[ao]|' +
+                     'Reclamad[ao]', re.IGNORECASE)
 
-import tjsp
 
-file = tjsp.parser(files[3567])
-file.soup
+# testing
+os.chdir('..')
+importlib.reload(tjsp)
+os.chdir('./html')
+
+tjsp.parser('sct00240037020128260625-14525.html').parse_litigants()
+
+# ok!
+tjsp.parser('sct10008096020188260157-6942.html').parse_summary()
+# not working
+tjsp.parser('sct00087585920108260408-12337.html').parse_litigants(transpose = True)
+# ok!
+tjsp.parser('sct10018086520178260539-19630.html').parse_litigants()
+
+testfile = tjsp.parser('sct00001763720178260275-2714.html').parse_litigants(transpose = True)
 
 # find litigants table
-table = file.soup.find('table', {'id': 'tablePartesPrincipais'})
+table = testfile.soup.find('table', {'id': 'tablePartesPrincipais'})
 
 # find text in each row
 text = [row.text for row in \
@@ -190,31 +217,55 @@ flat = [i.strip() for i in flat]
 flat = [re.sub(':', '', i) for i in flat]
 flat = list(filter(regex6.search, flat))
 
-# slice claimant and plaintiff info
-indices   = [i for i, word in enumerate(flat) if re.search(regex9, word)]
-claimant  = [flat[i:i + 2] for i in range(indices[0], indices[1], 2)]
-plaintiff = [flat[i:i + 2] for i in range(indices[1], len(flat), 2)]
+# initiate dictionary with case litigants
+litigants = {'claimant': None, 'plaintiff': None,
+             'clawyers': None, 'plawyers': None}
 
-# flatten lists
-claimant  = [i for j in claimant for i in j]
-plaintiff = [i for j in plaintiff for i in j]
+# produce claimant list
+claimantNames = [flat[i + 1] for i, word in enumerate(flat) if \
+                 re.search(regex9, word)]
 
-litigants = [claimant, plaintiff]
+# assign to dictionary
+litigants['claimant'] = claimantNames if not len(claimantNames) == 0 else ''
 
-pd.DataFrame([claimant, plaintiff])
+# produce plaintiff list
+plaintiffNames = [flat[i + 1] for i, word in enumerate(flat) if \
+                  re.search(regex10, word)]
 
+# assign to dictionary
+litigants['plaintiff'] = plaintiffNames if not len(plaintiffNames) == 0 else ''
 
+# create indexes for claimant and plaintiff information
+index0 = [i if re.search(regex9, word) else len(flat) for i, word in enumerate(flat)]
+index1 = [i if re.search(regex10,word) else len(flat) for i, word in enumerate(flat)]
+indexes = [index0[0], index1[0]]
 
+# then use the indexes to identify lawyers for each litigant
+lawyer0 = ';'.join(flat[3:indexes[1]:2])
+lawyer1 = ';'.join(flat[indexes[1] + 3::2])
 
-
-# transform to pd dataset
-text = pd.DataFrame(text)
-
-# return outcome if transpose is not provided as argument
-if transpose == False:
-    text.columns = ['parts', 'values']
-    return pd.DataFrame(text)
+# assign lawyers to claimants and plaintiffs
+if re.search(regex9, flat[indexes[0]]):
+    litigants['clawyers'] = lawyer0
+    litigants['plawyers'] = lawyer1
 else:
-    text = text.T
-    text.columns = text.iloc[0]
-    return pd.DataFrame(text[1:])
+    litigants['clawyers'] = lawyer1
+    litigants['plawyers'] = lawyer0
+
+# check if claimant and plaintiffs are of the same length
+nrow = max(len(litigants['claimant']), len(litigants['plaintiff']))
+
+# define the number of observations and fill missing
+litigants['claimant'] = litigants['claimant'] * nrow if \
+    nrow is not len(litigants['claimant']) else litigants['claimant']
+litigants['plaintiff'] = litigants['plaintiff'] * nrow if \
+    nrow is not len(litigants['plaintiff']) else litigants['plaintiff']
+
+# make dictionary a pd dataframe
+text = pd.DataFrame.from_dict(litigants)
+text = text.transpose().reset_index()
+text.columns = ['parts'] + ['names' + str(i + 1) for i in range(text.shape[1] - 1)]
+
+
+
+
