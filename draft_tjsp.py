@@ -72,7 +72,7 @@ file = 'sct10092683820178260011.html'
 file = 'sct00085892420138260002.html'
 file = 'sct10006570820188260320.html'
 
-file = tjsp.parser(file)
+file = tjsp.parser(file).parse_litigants()
 
 soup = file.soup
 globals()
@@ -178,7 +178,7 @@ regex9 = re.compile('Reqte|Autor|Exeqte|Imptte|Embargte|Reclamante',
                     re.IGNORECASE)
 regex10 = re.compile('Reqd[ao]|Exectd[ao]|Imptd[ao]|Réu|Embargd[ao]|' +
                      'Reclamad[ao]', re.IGNORECASE)
-
+regex11 = re.compile('Advogad[oa]', re.IGNORECASE)
 
 # testing
 os.chdir('..')
@@ -190,14 +190,18 @@ tjsp.parser('sct00240037020128260625-14525.html').parse_litigants()
 # ok!
 tjsp.parser('sct10008096020188260157-6942.html').parse_summary()
 # not working
-tjsp.parser('sct00087585920108260408-12337.html').parse_litigants(transpose = True)
+tjsp.parser('sct30018767820138260358-20220.html').parse_litigants()
+tjsp.parser('sct00001763720178260275-2714.html').parse_litigants(transpose = True)
+
 # ok!
 tjsp.parser('sct10018086520178260539-19630.html').parse_litigants()
 
-testfile = tjsp.parser('sct00001763720178260275-2714.html').parse_litigants(transpose = True)
+
+
+testfile = tjsp.parser('sct30018767820138260358-20220.html')
 
 # find litigants table
-table = testfile.soup.find('table', {'id': 'tablePartesPrincipais'})
+table = testfile.soup.find('table', {'id': 'tableTodasPartes'})
 
 # find text in each row
 text = [row.text for row in \
@@ -218,54 +222,32 @@ flat = [re.sub(':', '', i) for i in flat]
 flat = list(filter(regex6.search, flat))
 
 # initiate dictionary with case litigants
-litigants = {'claimant': None, 'plaintiff': None,
-             'clawyers': None, 'plawyers': None}
+litigants = {'claimant': [], 'defendant': [],
+             'clawyers': [], 'dlawyers': []}
 
-# produce claimant list
-claimantNames = [flat[i + 1] for i, word in enumerate(flat) if \
-                 re.search(regex9, word)]
+# define position for all claimants
+claimants = [(i, value) for i, (key, value) in enumerate(zip(flat[::2], flat[1::2])) if re.search(regex9, key)]
+defendants = [(i, value) for i, (key, value) in enumerate(zip(flat[::2], flat[1::2])) if re.search(regex10, key)]
 
-# assign to dictionary
-litigants['claimant'] = claimantNames if not len(claimantNames) == 0 else ''
-
-# produce plaintiff list
-plaintiffNames = [flat[i + 1] for i, word in enumerate(flat) if \
-                  re.search(regex10, word)]
-
-# assign to dictionary
-litigants['plaintiff'] = plaintiffNames if not len(plaintiffNames) == 0 else ''
-
-# create indexes for claimant and plaintiff information
-index0 = [i if re.search(regex9, word) else len(flat) for i, word in enumerate(flat)]
-index1 = [i if re.search(regex10,word) else len(flat) for i, word in enumerate(flat)]
-indexes = [index0[0], index1[0]]
-
-# then use the indexes to identify lawyers for each litigant
-lawyer0 = ';'.join(flat[3:indexes[1]:2])
-lawyer1 = ';'.join(flat[indexes[1] + 3::2])
-
-# assign lawyers to claimants and plaintiffs
-if re.search(regex9, flat[indexes[0]]):
-    litigants['clawyers'] = lawyer0
-    litigants['plawyers'] = lawyer1
-else:
-    litigants['clawyers'] = lawyer1
-    litigants['plawyers'] = lawyer0
-
-# check if claimant and plaintiffs are of the same length
-nrow = max(len(litigants['claimant']), len(litigants['plaintiff']))
-
-# define the number of observations and fill missing
-litigants['claimant'] = litigants['claimant'] * nrow if \
-    nrow is not len(litigants['claimant']) else litigants['claimant']
-litigants['plaintiff'] = litigants['plaintiff'] * nrow if \
-    nrow is not len(litigants['plaintiff']) else litigants['plaintiff']
-
-# make dictionary a pd dataframe
-text = pd.DataFrame.from_dict(litigants)
-text = text.transpose().reset_index()
-text.columns = ['parts'] + ['names' + str(i + 1) for i in range(text.shape[1] - 1)]
+flat[::2]
+flat[1::2]
 
 
+# loop over elements in litigant list and assign to different roles
+for i, (key, value) in enumerate(zip(flat[::2], flat[1::2])):
+    if re.search(regex9, key):
+        litigants['claimant'].append(value)
+    elif re.search(regex11, key) and re.search(regex9, flat[::2][i - 1]) or re.search(regex11, flat[::2][i - 1]):
+        litigants['clawyers'].append(value)
+    elif re.search(regex10, key):
+        litigants['defendant'].append(value)
+    elif re.search(regex11, key) and re.search(regex10, flat[::2][i - 1]) or re.search(regex11, flat[::2][i - 1]):
+        litigants['dlawyers'].append(value)
 
 
+for i, (key, value) in enumerate(zip(flat[::2], flat[1::2])):
+    if re.search(regex9, key):
+        litigants['claimant'].append(value)
+        while
+
+#
