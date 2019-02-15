@@ -71,3 +71,9 @@ peticoesTJSP::download_documents('00116417520158260481', '.', only_petitions = T
 vacancies2016 %>%
   filter(SG_UF == 'SP') %>%
   filter(SG_UE == '61018') %>% .[1,] %>% unlist()
+
+sctSummary %<>% select(-1)
+sctDetails %<>% select(-1)
+
+save(sctSummary, file = 'sctSummary.Rda')
+save(sctDetails, file = 'sctDetails.Rda')
