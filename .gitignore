@@ -43,3 +43,4 @@ __pycache__/
 
 # Ignore CSV files
 *.csv
+*.Rda
