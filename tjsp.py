@@ -243,6 +243,7 @@ class parser:
                         re.IGNORECASE)
     regex10 = re.compile('Reqd[ao]|Exectd[ao]|Imptd[ao]|Réu|Embargd[ao]|' +
                          'Reclamad[ao]', re.IGNORECASE)
+    regex11 = re.compile('Advogad[oa]', re.IGNORECASE)
 
     # init method shared by all class instances
     def __init__(self, file):
@@ -295,7 +296,11 @@ class parser:
         """method to parse litigant information"""
 
         # find litigants table
-        table = self.soup.find('table', {'id': 'tablePartesPrincipais'})
+        table = self.soup.find('table', {'id': 'tableTodasPartes'})
+
+        # use other table if all litigants is empty
+        if not table:
+            table = self.soup.find('table', {'id': 'tablePartesPrincipais'})
 
         # find text in each row
         text = [row.text for row in \
@@ -316,52 +321,34 @@ class parser:
         flat = list(filter(self.regex6.search, flat))
 
         # initiate dictionary with case litigants
-        litigants = {'claimant': None, 'plaintiff': None,
-                     'clawyers': None, 'plawyers': None}
+        litigants = {'claimant': [], 'defendant': [],
+                     'clawyers': [], 'dlawyers': []}
 
-        # produce claimant list
-        claimantNames = [flat[i + 1] for i, word in enumerate(flat) if \
-                         re.search(self.regex9, word)]
+        # switch litigants
+        switch = 0
 
-        # assign to dictionary
-        litigants['claimant'] = claimantNames \
-                                if not len(claimantNames) == 0 else ''
+        # define lists of keys and values
+        keys = flat[::2]
+        values = flat[1::2]
 
-        # produce plaintiff list
-        plaintiffNames = [flat[i + 1] for i, word in enumerate(flat) if \
-                          re.search(self.regex10, word)]
+        # zip over keys and values and assign to dictionary entry
+        for key, value in zip(keys, values):
+            if re.search(self.regex9, key):
+                litigants['claimant'].append(value)
+                switch = 1
+            if re.search(self.regex10, key):
+                litigants['defendant'].append(value)
+                switch = 2
+            if re.search(self.regex11, key) and switch == 1:
+                litigants['clawyers'].append(value)
+            if re.search(self.regex11, key) and switch == 2:
+                litigants['dlawyers'].append(value)
 
-        # assign to dictionary
-        litigants['plaintiff'] = plaintiffNames \
-                                 if not len(plaintiffNames) == 0 else ''
-
-        # create indexes for claimant and plaintiff information
-        index0 = [i if re.search(self.regex9, word) else len(flat) \
-                  for i, word in enumerate(flat)]
-        index1 = [i if re.search(self.regex10,word) else len(flat) \
-                  for i, word in enumerate(flat)]
-        indexes = [index0[0], index1[0]]
-
-        # then use the indexes to identify lawyers for each litigant
-        lawyer0 = ';'.join(flat[3:indexes[1]:2])
-        lawyer1 = ';'.join(flat[indexes[1] + 3::2])
-
-        # assign lawyers to claimants and plaintiffs
-        if re.search(self.regex9, flat[indexes[0]]):
-            litigants['clawyers'] = lawyer0
-            litigants['plawyers'] = lawyer1
-        else:
-            litigants['clawyers'] = lawyer1
-            litigants['plawyers'] = lawyer0
-
-        # check if claimant and plaintiffs are of the same length
-        nrow = max(len(litigants['claimant']), len(litigants['plaintiff']))
-
-        # define the number of observations and fill missing
-        litigants['claimant'] = litigants['claimant'] * nrow if \
-            nrow is not len(litigants['claimant']) else litigants['claimant']
-        litigants['plaintiff'] = litigants['plaintiff'] * nrow if \
-            nrow is not len(litigants['plaintiff']) else litigants['plaintiff']
+        # collapse lists
+        litigants['claimant'] = [';'.join(litigants['claimant'])]
+        litigants['defendant']= [';'.join(litigants['defendant'])]
+        litigants['clawyers'] = [';'.join(litigants['clawyers'])]
+        litigants['dlawyers'] = [';'.join(litigants['dlawyers'])]
 
         # make dictionary a pd dataframe
         text = pd.DataFrame.from_dict(litigants)
@@ -369,8 +356,7 @@ class parser:
         # return outcome if transpose is not provided as argument
         if transpose == False:
             text = text.transpose().reset_index()
-            text.columns = ['parts'] + ['names' + str(i + 1) for i in \
-                            range(text.shape[1] - 1)]
+            text.columns = ['partKey', 'partValue']
             return text
         else:
             return text
