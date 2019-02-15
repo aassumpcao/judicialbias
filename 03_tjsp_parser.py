@@ -115,7 +115,7 @@ sctinfo.columns = rename
 litigants = []
 errors = []
 
-# build case summary list
+# build case litigants list
 for i, file in zip(range(limit), files):
     # process litigants
     try:
@@ -135,8 +135,40 @@ for i, file in zip(range(limit), files):
 # check errors
 len(errors)
 
-# # write to file
-# codecs.open('litigantsProblems.txt', 'w', 'utf-8').write(errors)
-
 # build dataset from list
 litigants = pd.concat(litigants, ignore_index = True, sort = False)
+
+# empty list for case details and errors
+sctDetails = []
+errors = []
+
+# build case details list
+for i, file in zip(range(limit), files):
+    # process litigants
+    try:
+        # load each file
+        detail = tjsp.parser(file).parse_updates()
+        # append cases and candidate information
+        detail['caseID'] = [cases[i]] * len(detail)
+        detail['candidateID'] = [people[i]] * len(detail)
+        # append to litigants list
+        sctDetails.append(detail)
+    # create list of errors
+    except:
+        errors.append(file)
+    # print warning every 100 iterations
+    if (i + 1) % 100 == 0: print(str(i + 1) + ' / ' + str(limit))
+
+# check errors
+len(errors)
+
+# build dataset from list
+sctDetails = pd.concat(sctDetails, ignore_index = True, sort = False)
+
+# merge / bind / join everything
+sctSummary = pd.merge(sctinfo, litigants, 'left', ['caseID', 'candidateID'])
+
+# save dataset to file
+os.chdir('..')
+sctSummary.reset_index(drop = True).to_csv('sctSummary.csv')
+sctDetails.reset_index(drop = True).to_csv('sctDetails.csv')

@@ -8,6 +8,7 @@ import os
 import numpy as np
 import time
 import re
+import random
 import math
 import importlib
 import tjsp
@@ -178,88 +179,30 @@ regex9 = re.compile('Reqte|Autor|Exeqte|Imptte|Embargte|Reclamante', re.IGNORECA
 regex10 = re.compile('Reqd[ao]|Exectd[ao]|Imptd[ao]|Réu|Embargd[ao]|Reclamad[ao]', re.IGNORECASE)
 regex11 = re.compile('Advogad[oa]', re.IGNORECASE)
 
+# testing next parser
+errors = []
+testfiles = random.sample(files, 5)
 
-# testing
-os.chdir('..')
-importlib.reload(tjsp)
-os.chdir('./html')
+for i in range(len(testfiles)): tjsp.parser(testfiles[i]).parse_updates()
 
-tjsp.parser('sct00240037020128260625-14525.html').parse_litigants()
-
-# ok!
-tjsp.parser('sct10008096020188260157-6942.html').parse_summary()
-# not working
-tjsp.parser('sct30018767820138260358-20220.html').parse_litigants()
-tjsp.parser('sct00001763720178260275-2714.html').parse_litigants()
-
-# ok!
-tjsp.parser('sct10018086520178260539-19630.html').parse_litigants()
-
-testfile = tjsp.parser('sct00001763720178260275-2714.html').parse_litigants()
-testfile = tjsp.parser('sct30018767820138260358-20220.html').parse_litigants()
-
-# find litigants table
-table = testfile.soup.find('table', {'id': 'tableTodasPartes'})
-
-if not table:
-    table = testfile.soup.find('table', {'id': 'tablePartesPrincipais'})
-
-# find text in each row
-text = [row.text for row in \
-        table.find_all('tr', {'class': 'fundoClaro'})]
-
-# clean up string
-text = [re.sub(regex0,' ', i) for i in text]
-text = [re.sub(regex2, '', i) for i in text]
-text = [re.sub(regex4,' ', i) for i in text]
-
-# split variable names and contents.
-text = [re.split(regex5, i) for i in text]
-
-# flatten list, trim whitespace, replace ':', and delete empty strings
-flat = [i for j in text for i in j]
-flat = [i.strip() for i in flat]
-flat = [re.sub(':', '', i) for i in flat]
-flat = list(filter(regex6.search, flat))
-
-# initiate dictionary with case litigants
-litigants = {'claimant': [], 'defendant': [],
-             'clawyers': [], 'dlawyers': []}
-
-# switch litigants
-switch = 0
-
-# define lists of keys and values
-keys = flat[::2]
-values = flat[1::2]
-
-for key, value in zip(keys, values):
-    if re.search(regex9, key):
-        litigants['claimant'].append(value)
-        switch = 1
-    if re.search(regex10, key):
-        litigants['defendant'].append(value)
-        switch = 2
-    if re.search(regex11, key) and switch == 1:
-        litigants['clawyers'].append(value)
-    if re.search(regex11, key) and switch == 2:
-        litigants['dlawyers'].append(value)
-
-# collapse lists
-litigants['claimant'] = [';'.join(litigants['claimant'])]
-litigants['defendant']= [';'.join(litigants['defendant'])]
-litigants['clawyers'] = [';'.join(litigants['clawyers'])]
-litigants['dlawyers'] = [';'.join(litigants['dlawyers'])]
-
-# make dictionary a pd dataframe
-text = pd.DataFrame.from_dict(litigants)
-
-# return outcome if transpose is not provided as argument
-if transpose == False:
-    text = text.transpose().reset_index()
-    text.columns = ['partKey', 'partValue']
-    return text
-else:
-    return text
+detail = tjsp.parser(testfiles[0]).parse_updates()
+detail['caseID'] = [cases[0]] * len(detail)
+detail['candidateID'] = [people[0]] * len(detail)
 
 
+# build case details list
+for i, file in zip(range(limit), files):
+    # process litigants
+    try:
+        # load each file
+        detail = tjsp.parser(file).parse_updates()
+        # append cases and candidate information
+        detail['caseID'] = [cases[i]] * len(detail)
+        detail['candidateID'] = [people[i]] * len(detail)
+        # append to litigants list
+        sctDetails.append(detail)
+    # create list of errors
+    except:
+        errors.append(file)
+    # print warning every 100 iterations
+    if (i + 1) % 100 == 0: print(str(i + 1) + ' / ' + str(limit))
