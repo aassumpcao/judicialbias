@@ -128,7 +128,7 @@ for i, file in zip(range(limit), files):
         litigants.append(litigant)
     # create list of errors
     except:
-        errors2.append(file)
+        errors.append(file)
     # print warning every 100 iterations
     if (i + 1) % 100 == 0: print(str(i + 1) + ' / ' + str(limit))
 
