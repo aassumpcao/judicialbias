@@ -11,7 +11,6 @@ import numpy as np
 import os
 import pandas as pd
 import re
-import re
 import time
 from bs4 import BeautifulSoup
 from selenium                          import webdriver

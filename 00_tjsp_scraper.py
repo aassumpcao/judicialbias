@@ -25,7 +25,7 @@ import tjsp # import scraper module
 import importlib
 
 # # reload module if necessary
-importlib.reload(tjsp)
+# importlib.reload(tjsp)
 
 # define chrome options
 CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'

@@ -101,14 +101,13 @@ lawsuits = pd.concat(lawsuits, ignore_index = True, sort = False)
 lawsuits['caseID'] = cases
 lawsuits['candidateID'] = people
 
-# drop useless columns
-droplist = list(lawsuits.columns)
-droplist = [droplist[i] for i in [0, 1, 2, 4, 7, 9] + list(range(11, 17))]
-sctinfo  = lawsuits.drop(droplist, axis = 1)
+# keep meaningful columns
+cols = ['Classe', 'Área', 'Assunto', 'Distribuição', 'Juiz', 'Valor da ação']
+sctinfo = lawsuits[cols + ['caseID', 'candidateID']]
 
 # rename columns
-rename = ['subject', 'other', 'assignment', 'judge', 'claim', 'caseID',
-          'candidateID']
+rename = ['class', 'subclass', 'subject', 'assignment', 'judge', 'claim',
+          'caseID', 'candidateID']
 sctinfo.columns = rename
 
 # empty lists for litigants and errors
@@ -132,8 +131,8 @@ for i, file in zip(range(limit), files):
     # print warning every 100 iterations
     if (i + 1) % 100 == 0: print(str(i + 1) + ' / ' + str(limit))
 
-# check errors
-len(errors)
+# # check errors
+# len(errors)
 
 # build dataset from list
 litigants = pd.concat(litigants, ignore_index = True, sort = False)
@@ -159,8 +158,8 @@ for i, file in zip(range(limit), files):
     # print warning every 100 iterations
     if (i + 1) % 100 == 0: print(str(i + 1) + ' / ' + str(limit))
 
-# check errors
-len(errors)
+# # check errors
+# len(errors)
 
 # build dataset from list
 sctDetails = pd.concat(sctDetails, ignore_index = True, sort = False)
