@@ -137,19 +137,98 @@ class scraper:
             return 'There were errors when finding cases for candidate ' \
                 + self.name + '.'
 
-    # # case number scraper function
-    # def case(self, name):
-    #     """method to download any case number by candidate information"""
+    # case number scraper function
+    def cpf(self, cpf):
+        """method to download any case number by cpf"""
 
-    #     # search parameters
-    #     # not available
+        # store politician's cpf in class object
+        self.cpf = cpf
 
-    #     # return call
-    #     return 'This method has not been developed yet'
+        # navigate to page
+        self.browser.get(self.urldec)
+
+        # find text box to write politicians' name in and case class
+        select  = '//*[(@name = "cbPesquisa")]/option[text() = "Documento da Parte"]'
+        cpfid   = '//*[(@id = "campo_DOCPARTE")]'
+        cpfid   = 'campo_DOCPARTE'
+        classid = 'classe_selectionText'
+
+        # click to search
+        sbtpath = '//*[(@id = "pbEnviar")]'
+
+        # find search results
+        search = '//span[(@class = "resultadoPaginacao")]'
+
+        # find total number of cases in page
+        numbers = '//*[contains(@class, "linkProcesso")]'
+
+        # fint total number of cases in all pages and extract it
+        regex0 = re.compile('(?<=de )[0-9]+', re.IGNORECASE)
+        regex1 = re.compile('[0-9]+', re.IGNORECASE)
+
+        # find next page button
+        nextpage = '//*[@title = "Próxima página"]'
+
+        # try catch for candidates who weren't found
+        try:
+            # find 'documento da parte' selection box, click and send politician
+            # cpf
+            self.browser.find_element_by_xpath(select).click()
+            self.browser.find_element_by_id(cpfid).send_keys(cpf)
+
+            # find submit button and click it to search cases
+            time.sleep(.5)
+            self.browser.find_element_by_xpath(sbtpath).click()
+
+            # force wait before information is loaded
+            time.sleep(1)
+
+            # return the text containing the results of the search
+            searched = self.browser.find_element_by_xpath(search).text
+
+            # confirm the number of cases found
+            total = re.search(regex0, searched)
+
+            # exit if no cases are found
+            if not total: return 'No case found for cpf ' + self.cpf + '.'
+
+            # else determine the number of pages containing all cases
+            total = re.search(regex0, searched)[0]
+            pages = math.ceil(int(total) / 25)
+
+            # find and extract all individual case numbers in first page
+            casenumbers = self.browser.find_elements_by_xpath(numbers)
+            casenumbers = [x.text for x in casenumbers]
+
+            # run loop if there are multiple pages
+            if pages > 1:
+                # loop constructing list of case numbers in other pages
+                for i in range(pages - 1):
+                    if not i == pages - 1:
+                        # click to advance pages except for last page
+                        self.browser.find_element_by_xpath(nextpage).click()
+                    time.sleep(1)
+                    # get additional case numbers
+                    extranumbers = self.browser.find_elements_by_xpath(numbers)
+                    extranumbers = [x.text for x in extranumbers]
+                    # extend case numbers list
+                    casenumbers.extend(extranumbers)
+
+            # return case numbers outcome as list
+            return casenumbers
+
+        # handle error
+        except:
+            return 'No case found for cpf ' + self.cpf + '.'
+
 
     # sct case decisions scraper function
     def decision(self, number):
-        """method to download case decisions by candidate information"""
+        """method to download case decisions by candidate information
+
+            currently only working for SCT cases
+
+        """
 
         # store case number in class object
         self.number = number

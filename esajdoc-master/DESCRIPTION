@@ -1,0 +1,27 @@
+Package: esajdoc
+Title: Download TJSP Data By Document Number
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Julio",
+           family = "Trecenti",
+           role = c("aut", "cre"),
+           email = "julio.trecenti@gmail.com")
+Description: Download TJSP data by document number in esaj.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+URL: https://github.com/abjur/esajdoc
+BugReports: https://github.com/abjur/esajdoc/issues
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 6.1.1
+Imports: 
+    magrittr,
+    xml2,
+    purrr,
+    tidyr,
+    tibble,
+    abjutils,
+    fs,
+    httr,
+    stringr,
+    dplyr

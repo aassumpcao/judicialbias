@@ -1,0 +1,47 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# esajdoc [![Travis build status](https://travis-ci.org/abjur/esajdoc.svg?branch=master)](https://travis-ci.org/abjur/esajdoc)
+
+The goal of esajdoc is to download esaj results by document number (CPF or CNPJ).
+
+## Installation
+
+You can install the dev version of `esajdoc` here
+
+```{r eval=FALSE}
+devtools::install_github("abjur/esajdoc")
+```
+
+```{r}
+library(esajdoc)
+```
+
+## Example
+
+```{r example, eval=FALSE}
+cpopg_doc("96926147868")
+fs::dir_ls("data-raw/cpopg/96926147868")
+```
+
+    #> data-raw/cpopg/96926147868/pag_01.html
+
+
+```{r cars}
+files <- fs::dir_ls("data-raw/cpopg/96926147868")
+result <- cpopg_doc_parse(files)
+tidyr::unnest(result, output)
+```
+

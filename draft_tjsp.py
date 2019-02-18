@@ -179,30 +179,84 @@ regex9 = re.compile('Reqte|Autor|Exeqte|Imptte|Embargte|Reclamante', re.IGNORECA
 regex10 = re.compile('Reqd[ao]|Exectd[ao]|Imptd[ao]|Réu|Embargd[ao]|Reclamad[ao]', re.IGNORECASE)
 regex11 = re.compile('Advogad[oa]', re.IGNORECASE)
 
-# testing next parser
-errors = []
-testfiles = random.sample(files, 5)
+cpf = '00768782872'
 
-for i in range(len(testfiles)): tjsp.parser(testfiles[i]).parse_updates()
+# store politician's cpf in class object
+self.cpf = cpf
 
-detail = tjsp.parser(testfiles[0]).parse_updates()
-detail['caseID'] = [cases[0]] * len(detail)
-detail['candidateID'] = [people[0]] * len(detail)
+# navigate to page
+browser.get(urldec)
 
+# find text box to write politicians' name in and case class
+select  = '//*[(@name = "cbPesquisa")]/option[text() = "Documento da Parte"]'
+cpfid   = '//*[(@id = "campo_DOCPARTE")]'
+cpfid   = 'campo_DOCPARTE'
+classid = 'classe_selectionText'
 
-# build case details list
-for i, file in zip(range(limit), files):
-    # process litigants
-    try:
-        # load each file
-        detail = tjsp.parser(file).parse_updates()
-        # append cases and candidate information
-        detail['caseID'] = [cases[i]] * len(detail)
-        detail['candidateID'] = [people[i]] * len(detail)
-        # append to litigants list
-        sctDetails.append(detail)
-    # create list of errors
-    except:
-        errors.append(file)
-    # print warning every 100 iterations
-    if (i + 1) % 100 == 0: print(str(i + 1) + ' / ' + str(limit))
+# click to search
+sbtpath = '//*[(@id = "pbEnviar")]'
+
+# find search results
+search = '//span[(@class = "resultadoPaginacao")]'
+
+# find total number of cases in page
+numbers = '//*[contains(@class, "linkProcesso")]'
+
+# fint total number of cases in all pages and extract it
+regex0 = re.compile('(?<=de )[0-9]+', re.IGNORECASE)
+regex1 = re.compile('[0-9]+', re.IGNORECASE)
+
+# find next page button
+nextpage = '//*[@title = "Próxima página"]'
+
+# try catch for candidates who weren't found
+try:
+    # find 'documento da parte' selection box, click and send politician
+    # cpf
+    browser.find_element_by_xpath(select).click()
+    browser.find_element_by_id(cpfid).send_keys(cpf)
+
+    # find submit button and click it to search cases
+    time.sleep(.5)
+    browser.find_element_by_xpath(sbtpath).click()
+
+    # force wait before information is loaded
+    time.sleep(1)
+
+    # return the text containing the results of the search
+    searched = browser.find_element_by_xpath(search).text
+
+    # confirm the number of cases found
+    total = re.search(regex0, searched)
+
+    # exit if no cases are found
+    if not total: return 'No case found for cpf ' + self.cpf + '.'
+
+    # else determine the number of pages containing all cases
+    total = re.search(regex0, searched)[0]
+    pages = math.ceil(int(total) / 25)
+
+    # find and extract all individual case numbers in first page
+    casenumbers = browser.find_elements_by_xpath(numbers)
+    casenumbers = [x.text for x in casenumbers]
+
+    # run loop if there are multiple pages
+    if pages > 1:
+        # loop constructing list of case numbers in other pages
+        for i in range(pages - 1):
+            if not i == pages - 1:
+                # click to advance pages except for last page
+                browser.find_element_by_xpath(nextpage).click()
+            time.sleep(1)
+            # get additional case numbers
+            extranumbers = browser.find_elements_by_xpath(numbers)
+            extranumbers = [x.text for x in extranumbers]
+            # extend case numbers list
+            casenumbers.extend(extranumbers)
+
+    # return case numbers outcome as list
+    return casenumbers
+
+# handle error
+except:
+    return 'No case found for cpf ' + self.cpf + '.'
