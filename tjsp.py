@@ -42,6 +42,13 @@ class scraper:
     classSCT = 'Procedimento do Juizado Especial Cível'
     java     = 'return document.getElementsByTagName("html")[0].innerHTML'
 
+    # regex arguments
+    regex0 = re.compile('(?<=de )[0-9]+', re.IGNORECASE)
+    regex1 = re.compile(r'\n')
+    regex2 = re.compile('[^a-zA-Z]')
+    regex3 = re.compile('CPF')
+    regex4 = re.compile('Juizado Especial Cível')
+
     # init method shared by all class instances
     def __init__(self, browser):
         """load into class the browser"""
@@ -49,7 +56,7 @@ class scraper:
         # store browser info
         self.browser = browser
 
-    # case number scraper function (only available for special civil tribunals)
+    # case number scraper function (only for special civil tribunals)
     def case(self, name):
         """method to narrow in on sct cases from list of cases"""
 
@@ -73,8 +80,7 @@ class scraper:
         numbers = '//*[contains(@class, "fonteNegrito")]'
 
         # fint total number of cases in all pages and extract it
-        regex0 = re.compile('(?<=de )[0-9]+', re.IGNORECASE)
-        regex1 = re.compile('[0-9]+', re.IGNORECASE)
+        self.regex0 = re.compile('(?<=de )[0-9]+', re.IGNORECASE)
 
         # find next page button
         nextpage = '//*[@title = "Próxima página"]'
@@ -102,13 +108,13 @@ class scraper:
             searched = self.browser.find_element_by_xpath(search).text
 
             # confirm the number of cases found
-            total = re.search(regex0, searched)
+            total = re.search(self.regex0, searched)
 
             # exit if no cases are found
             if not total: return 'Nothing found'
 
             # else determine the number of pages containing all cases
-            total = re.search(regex0, searched)[0]
+            total = re.search(self.regex0, searched)[0]
             pages = math.ceil(int(total) / 10)
 
             # find and extract all individual case numbers in first page
@@ -138,7 +144,7 @@ class scraper:
                 + self.name + '.'
 
     # case number scraper function
-    def cpf(self, cpf):
+    def cpf(self, cpf, sct = False):
         """method to download any case number by cpf"""
 
         # store politician's cpf in class object
@@ -148,7 +154,8 @@ class scraper:
         self.browser.get(self.urldec)
 
         # find text box to write politicians' name in and case class
-        select  = '//*[(@name = "cbPesquisa")]/option[text() = "Documento da Parte"]'
+        select  = '//*[(@name = "cbPesquisa")]' + \
+                  '/option[text() = "Documento da Parte"]'
         cpfid   = '//*[(@id = "campo_DOCPARTE")]'
         cpfid   = 'campo_DOCPARTE'
         classid = 'classe_selectionText'
@@ -162,17 +169,13 @@ class scraper:
         # find total number of cases in page
         numbers = '//*[contains(@class, "linkProcesso")]'
 
-        # fint total number of cases in all pages and extract it
-        regex0 = re.compile('(?<=de )[0-9]+', re.IGNORECASE)
-        regex1 = re.compile('[0-9]+', re.IGNORECASE)
-
         # find next page button
         nextpage = '//*[@title = "Próxima página"]'
 
         # try catch for candidates who weren't found
         try:
-            # find 'documento da parte' selection box, click and send politician
-            # cpf
+            # find 'documento da parte' selection box, click and send
+            # politician cpf
             self.browser.find_element_by_xpath(select).click()
             self.browser.find_element_by_id(cpfid).send_keys(cpf)
 
@@ -187,18 +190,41 @@ class scraper:
             searched = self.browser.find_element_by_xpath(search).text
 
             # confirm the number of cases found
-            total = re.search(regex0, searched)
+            total = re.search(self.regex0, searched)
 
             # exit if no cases are found
             if not total: return 'No case found for cpf ' + self.cpf + '.'
 
             # else determine the number of pages containing all cases
-            total = re.search(regex0, searched)[0]
+            total = re.search(self.regex0, searched)[0]
             pages = math.ceil(int(total) / 25)
 
-            # find and extract all individual case numbers in first page
-            casenumbers = self.browser.find_elements_by_xpath(numbers)
-            casenumbers = [x.text for x in casenumbers]
+            # if sct
+            if sct:
+                # if summary info is requested
+                caseclass = '//*[contains(@id, "divProcesso")]'
+
+                # define empty list for process
+                cases = {'title': [], 'casenumber': [], 'litigant': []}
+
+                # get process summary
+                for i in self.browser.find_elements_by_xpath(caseclass):
+                    case = [None, None, None]
+                    for x, j in enumerate(i.find_elements_by_tag_name('div')):
+                        if re.search(self.regex1, j.text):
+                            case[0] = j.text
+                        if re.search(self.regex2, j.text) and x < 2:
+                            case[1] = j.text
+                        if re.search(self.regex3, j.text):
+                            case[2] = j.text
+                    # append to cases
+                    cases['title'].append(case[0])
+                    cases['casenumber'].append(case[1])
+                    cases['litigant'].append(case[2])
+            else:
+                # find and extract all individual case numbers in first page
+                casenumbers = self.browser.find_elements_by_xpath(numbers)
+                casenumbers = [x.text for x in casenumbers]
 
             # run loop if there are multiple pages
             if pages > 1:
@@ -207,20 +233,48 @@ class scraper:
                     if not i == pages - 1:
                         # click to advance pages except for last page
                         self.browser.find_element_by_xpath(nextpage).click()
-                    time.sleep(1)
-                    # get additional case numbers
-                    extranumbers = self.browser.find_elements_by_xpath(numbers)
-                    extranumbers = [x.text for x in extranumbers]
-                    # extend case numbers list
-                    casenumbers.extend(extranumbers)
+                    time.sleep(.5)
+                    # if sct
+                    if sct:
+                        time.sleep(.5)
+                        # get process summary
+                        for i in \
+                            self.browser.find_elements_by_xpath(caseclass):
+                            case = [None, None, None]
+                            for x, j in \
+                                enumerate(i.find_elements_by_tag_name('div')):
+                                if re.search(self.regex1, j.text):
+                                    case[0] = j.text
+                                if re.search(self.regex2, j.text) and x < 2:
+                                    case[1] = j.text
+                                if re.search(self.regex3, j.text):
+                                    case[2] = j.text
+                            # append to cases
+                            cases['title'].append(case[0])
+                            cases['casenumber'].append(case[1])
+                            cases['litigant'].append(case[2])
+                    else:
+                        # get additional case numbers
+                        extranum = self.browser.find_elements_by_xpath(num)
+                        extranum = [x.text for x in extranum]
+                        # extend case numbers list
+                        casenumbers.extend(extranum)
 
-            # return case numbers outcome as list
-            return casenumbers
+            # return cases summaries or case numbers as list
+            if sct:
+                cases = pd.DataFrame(cases)
+                cases = cases[cases['title'].str.contains(self.regex4)]
+                if len(cases) > 0:
+                    cases = cases.drop(columns = 'title').to_dict('list')
+                    return cases
+                else:
+                    return 'No sct cases found for cpf' + self.cpf + '.'
+            else:
+                return casenumbers
 
         # handle error
         except:
-            return 'No case found for cpf ' + self.cpf + '.'
-
+            return 'Error for cpf ' + self.cpf + '.'
 
     # sct case decisions scraper function
     def decision(self, number):

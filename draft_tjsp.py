@@ -14,14 +14,14 @@ import importlib
 import tjsp
 import feather
 from bs4 import BeautifulSoup
-# from selenium                          import webdriver
-# from selenium.webdriver.chrome.options import Options
-# from selenium.common.exceptions        import TimeoutException
-# from selenium.common.exceptions        import StaleElementReferenceException
-# from selenium.webdriver.common.by      import By
-# from selenium.webdriver.common.keys    import Keys
-# from selenium.webdriver.support.ui     import WebDriverWait
-# from selenium.webdriver.support        import expected_conditions as EC
+from selenium                          import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions        import TimeoutException
+from selenium.common.exceptions        import StaleElementReferenceException
+from selenium.webdriver.common.by      import By
+from selenium.webdriver.common.keys    import Keys
+from selenium.webdriver.support.ui     import WebDriverWait
+from selenium.webdriver.support        import expected_conditions as EC
 
 # initial options
 # set working dir
@@ -180,6 +180,7 @@ regex10 = re.compile('Reqd[ao]|Exectd[ao]|Imptd[ao]|Réu|Embargd[ao]|Reclamad[ao
 regex11 = re.compile('Advogad[oa]', re.IGNORECASE)
 
 cpf = '00768782872'
+cpf = '96926147868'
 
 # store politician's cpf in class object
 self.cpf = cpf
@@ -210,53 +211,114 @@ regex1 = re.compile('[0-9]+', re.IGNORECASE)
 nextpage = '//*[@title = "Próxima página"]'
 
 # try catch for candidates who weren't found
-try:
-    # find 'documento da parte' selection box, click and send politician
-    # cpf
-    browser.find_element_by_xpath(select).click()
-    browser.find_element_by_id(cpfid).send_keys(cpf)
 
-    # find submit button and click it to search cases
-    time.sleep(.5)
-    browser.find_element_by_xpath(sbtpath).click()
+# find 'documento da parte' selection box, click and send politician
+# cpf
+browser.find_element_by_xpath(select).click()
+browser.find_element_by_id(cpfid).send_keys(cpf)
 
-    # force wait before information is loaded
-    time.sleep(1)
+# find submit button and click it to search cases
+time.sleep(.5)
+browser.find_element_by_xpath(sbtpath).click()
 
-    # return the text containing the results of the search
-    searched = browser.find_element_by_xpath(search).text
+# force wait before information is loaded
+time.sleep(1)
 
-    # confirm the number of cases found
-    total = re.search(regex0, searched)
+# return the text containing the results of the search
+searched = browser.find_element_by_xpath(search).text
 
-    # exit if no cases are found
-    if not total: return 'No case found for cpf ' + self.cpf + '.'
+# confirm the number of cases found
+total = re.search(regex0, searched)
 
-    # else determine the number of pages containing all cases
-    total = re.search(regex0, searched)[0]
-    pages = math.ceil(int(total) / 25)
+# exit if no cases are found
+if not total: return 'No case found for cpf ' + self.cpf + '.'
 
-    # find and extract all individual case numbers in first page
-    casenumbers = browser.find_elements_by_xpath(numbers)
-    casenumbers = [x.text for x in casenumbers]
+# else determine the number of pages containing all cases
+total = re.search(regex0, searched)[0]
+pages = math.ceil(int(total) / 25)
 
-    # run loop if there are multiple pages
-    if pages > 1:
-        # loop constructing list of case numbers in other pages
-        for i in range(pages - 1):
-            if not i == pages - 1:
-                # click to advance pages except for last page
-                browser.find_element_by_xpath(nextpage).click()
-            time.sleep(1)
-            # get additional case numbers
-            extranumbers = browser.find_elements_by_xpath(numbers)
-            extranumbers = [x.text for x in extranumbers]
-            # extend case numbers list
-            casenumbers.extend(extranumbers)
+# find and extract all individual case numbers in first page
+casenumbers = browser.find_elements_by_xpath(numbers)
+casenumbers = [x.text for x in casenumbers]
 
-    # return case numbers outcome as list
-    return casenumbers
+# run loop if there are multiple pages
+if pages > 1:
+    # loop constructing list of case numbers in other pages
+    for i in range(pages - 1):
+        if not i == pages - 1:
+            # click to advance pages except for last page
+            browser.find_element_by_xpath(nextpage).click()
+        time.sleep(1)
+        # get additional case numbers
+        extranumbers = browser.find_elements_by_xpath(numbers)
+        extranumbers = [x.text for x in extranumbers]
+        # extend case numbers list
+        casenumbers.extend(extranumbers)
+
+# return case numbers outcome as list
+return casenumbers
 
 # handle error
-except:
-    return 'No case found for cpf ' + self.cpf + '.'
+return 'No case found for cpf ' + self.cpf + '.'
+
+regex1 = re.compile(r'\n')
+regex2 = re.compile('[^a-zA-Z]')
+regex3 = re.compile('CPF')
+
+# if summary info is requested
+caseclass = '//*[contains(@id, "divProcesso")]'
+
+# define empty list for process
+cases = {'title': [], 'casenumber': [], 'litigant': []}
+
+# get process summary
+for i in browser.find_elements_by_xpath(caseclass):
+    case = [None, None, None]
+    for x, j in enumerate(i.find_elements_by_tag_name('div')):
+        if re.search(regex1, j.text): case[0] = j.text
+        if re.search(regex2, j.text) and x < 2: case[1] = j.text
+        if re.search(regex3, j.text): case[2] = j.text
+    cases['title'].append(case[0])
+    cases['casenumber'].append(case[1])
+    cases['litigant'].append(case[2])
+
+cases = pd.DataFrame(cases)
+
+
+
+
+cpf = '00768782872'
+cpf = '96926147868'
+
+importlib.reload(tjsp)
+tjsp.scraper(browser).cpf('96926147868', True)
+
+len(test['title'])
+len(test['casenumber'])
+len(test['litigant'])
+
+caseclass = '//*[contains(@id, "divProcesso")]'
+
+cases = {'title': [], 'casenumber': [], 'litigant': []}
+
+# get process summary
+for i in browser.find_elements_by_xpath(caseclass):
+    case = [None, None, None]
+    for x, j in enumerate(i.find_elements_by_tag_name('div')):
+        if re.search(regex1, j.text):
+            case[0] = j.text
+        if re.search(regex2, j.text) and x < 2:
+            case[1] = j.text
+        if re.search(regex3, j.text):
+            case[2] = j.text
+    cases['title'].append(case[0])
+    cases['casenumber'].append(case[1])
+    cases['litigant'].append(case[2])
+
+
+
+cases = pd.DataFrame(test)
+cases = cases[cases['title'].str.contains(regex4)]
+
+
+
