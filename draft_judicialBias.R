@@ -50,6 +50,7 @@ candidates %$% table(candidacy.expenditures, election.year)
 library(tidyverse)
 library(magrittr)
 library(feather)
+library(readr)
 
 # load to file
 load('candidatesSP.Rda')
@@ -77,3 +78,14 @@ sctDetails %<>% select(-1)
 
 save(sctSummary, file = 'sctSummary.Rda')
 save(sctDetails, file = 'sctDetails.Rda')
+
+processos <- read_csv('politicos_processos.csv')
+
+# filter cases down to SCT only (775)
+processos.jec <- processos %>%
+  select(-X1) %>%
+  filter(str_detect(recebido_em, 'Cível')) %>%
+  mutate(recebido_em = str_sub(recebido_em, 14)) %>%
+  filter(str_detect(recebido_em, 'Juizado Especial'))
+
+

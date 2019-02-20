@@ -316,9 +316,6 @@ for i in browser.find_elements_by_xpath(caseclass):
     cases['litigant'].append(case[2])
 
 
-
-cases = pd.DataFrame(test)
-cases = cases[cases['title'].str.contains(regex4)]
-
+tjsp.scraper(browser).case('Micheloni')
 
 

@@ -5,30 +5,30 @@
 # import statements
 library(tidyverse)
 library(magrittr)
-library(feather)
+library(readr)
 
 # load dataset
 load('candidatesSP.Rda')
 
 # subset data
-candidates %<>% select(candidate.name, scraper.id)
+candidatesSP %<>% select(candidate.name, candidate.ssn, scraper.id)
 
 # subset to unique values
-candidates %<>% distinct(candidate.name, .keep_all = TRUE)
+candidatesSP %<>% distinct(candidate.ssn, .keep_all = TRUE)
 
 # change letter case
-candidates %<>% mutate(candidate.name = str_to_title(candidate.name))
+candidatesSP %<>% mutate(candidate.name = str_to_title(candidate.name))
 
 # create test dataset
-trialRun <- sample_n(candidates, 500)
+trialRun <- sample_n(candidatesSP, 500)
 
 # save to disk
-write_feather(trialRun, 'trialRun.feather')
+write_csv(trialRun, 'trialRun.csv')
 save(trialRun, file = 'trialRun.Rda')
 
 # create final dataset
-write_feather(candidates, 'candidatesUnique.feather')
-save(candidates, file = 'candidatesUnique.Rda')
+write_csv(candidatesSP, 'candidatesUnique.csv')
+save(candidatesSP, file = 'candidatesUnique.Rda')
 
 # quit R
 q('no')
