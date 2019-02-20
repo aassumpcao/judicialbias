@@ -16,6 +16,7 @@ import os
 import pandas as pd
 import re
 import time
+import datetime
 
 # import third-party and local libraries
 from selenium                          import webdriver
@@ -54,7 +55,7 @@ cases = {'casenumber': [], 'litigant': []}
 
 # import test dataset with all elected politicians
 candidates = pd.read_csv('candidatesUnique.csv', index_col = 0, dtype = str)
-candidates = list(candidates['candidate.ssn'])[:15]
+candidates = list(candidates['candidate.ssn'])
 limit = len(candidates)
 
 # download case numbers
@@ -65,8 +66,8 @@ for i in range(limit):
     cases['casenumber'] += case['casenumber']
     cases['litigant']   += case['litigant']
     # print warning every 10 iterations
-    # if (i + 1) % 10 == 0:
-    print(str(i + 1) + ' / ' + str(limit))
+    if (i + 1) % 2000 == 0:
+        print(str(i + 1) + ' / ' + str(limit) + '; ', datetime.datetime.now())
 
 # quit loop at the end
 browser.quit()

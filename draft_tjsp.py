@@ -11,7 +11,7 @@ import re
 import random
 import math
 import importlib
-import tjsp
+import tjsp_tests
 import feather
 from bs4 import BeautifulSoup
 from selenium                          import webdriver
@@ -21,7 +21,10 @@ from selenium.common.exceptions        import StaleElementReferenceException
 from selenium.webdriver.common.by      import By
 from selenium.webdriver.common.keys    import Keys
 from selenium.webdriver.support.ui     import WebDriverWait
+from selenium.webdriver.support.ui     import Select
 from selenium.webdriver.support        import expected_conditions as EC
+
+clear = lambda: os.system('clear')
 
 # initial options
 # set working dir

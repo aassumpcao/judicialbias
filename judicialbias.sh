@@ -1,11 +1,9 @@
 #!/bin/bash
 
 #SBATCH -p general
-#SBATCH -N 10
-#SBATCH --mem=8g
-#SBATCH -n 24
+#SBATCH -N 11
 #SBATCH -t 1-
 #SBATCH --mail-user=andre.assumpcao@gmail.com
 #SBATCH --mail-type=ALL
 
-R CMD BATCH --no-save judicialbias.R
+python3.7 00_tjsp_scraper.py
