@@ -1,0 +1,7 @@
+README.md
+setup.py
+tjsp.egg-info/PKG-INFO
+tjsp.egg-info/SOURCES.txt
+tjsp.egg-info/dependency_links.txt
+tjsp.egg-info/requires.txt
+tjsp.egg-info/top_level.txt

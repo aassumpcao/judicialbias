@@ -1,5 +1,0 @@
-conda-verify
-anaconda-navigator
-anaconda-client
-navigator-updater
-tables

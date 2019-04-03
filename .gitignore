@@ -40,6 +40,7 @@ rsconnect/
 html/
 html-problems/
 __pycache__/
+data/
 
 # Ignore CSV files
 *.csv
