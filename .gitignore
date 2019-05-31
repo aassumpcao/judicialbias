@@ -42,7 +42,7 @@ html-problems/
 html-zero/
 __pycache__/
 data/
-oldata/
+olddata/
 
 # Ignore CSV files
 *.csv

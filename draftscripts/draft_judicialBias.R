@@ -52,40 +52,21 @@ library(magrittr)
 library(feather)
 library(readr)
 
-# load to file
-load('candidatesSP.Rda')
-load('candidatesUnique.Rda')
-
-nrow(candidatesSP)
-nrow(candidatesUnique)
-
-candidateCPF <- candidatesSP %>% select(candidateCPF = candidate.ssn,
-                                        scraperID = scraper.id,
-                                        munID = election.ID)
-
-write_feather(candidateCPF, 'candidateCPF.feather')
-
-install.packages('peticoesTJSP-master', repos = NULL, type = 'source')
-
-peticoesTJSP::download_documents('00116417520158260481', '.', only_petitions = TRUE)
-
-vacancies2016 %>%
-  filter(SG_UF == 'SP') %>%
-  filter(SG_UE == '61018') %>% .[1,] %>% unlist()
-
-sctSummary %<>% select(-1)
-sctDetails %<>% select(-1)
-
-save(sctSummary, file = 'sctSummary.Rda')
-save(sctDetails, file = 'sctDetails.Rda')
-
-processos <- read_csv('politicos_processos.csv')
-
-# filter cases down to SCT only (775)
-processos.jec <- processos %>%
-  select(-X1) %>%
-  filter(str_detect(recebido_em, 'Cível')) %>%
-  mutate(recebido_em = str_sub(recebido_em, 14)) %>%
-  filter(str_detect(recebido_em, 'Juizado Especial'))
 
 
+# import packages
+library(tidyverse)
+library(magrittr)
+library(feather)
+library(readr)
+
+# load data
+load('data/sctSummary.Rda')
+load('data/sctDetails.Rda')
+
+sct <- read_csv('data/sct.csv')
+
+# filter to sct cases
+sctSummary %>%
+  filter(class == 'Procedimento do Juizado Especial Cível') %>%
+  View()

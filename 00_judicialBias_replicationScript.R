@@ -1,4 +1,4 @@
-### judicial favoritism of politicians: analysis script
+### judicial favoritism of politicians
 # master script
 #   this is the master script for the reproduction of the entire work in chapter
 #   two of my dissertation. it contains two large groups of scripts (r and
