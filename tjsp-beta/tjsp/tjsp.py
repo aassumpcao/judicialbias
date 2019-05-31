@@ -125,7 +125,8 @@ class scraper:
     # search method taking in name as argument (sct cases only)
     def name(self, name):
 
-        """ the name method saves sct case numbers using a person's name
+        """
+            the name method saves sct case numbers using a person's name
             as the search criterion. search patterns follow the same
             structure as that of the tj-sp website.
         """
@@ -184,7 +185,8 @@ class scraper:
     # search method taking in ssn as argument
     def cpf(self, cpf):
 
-        """ the cpf method saves sct case numbers using a person's ssn
+        """
+            the cpf method saves sct case numbers using a person's ssn
             as the search criterion. there are no additional search
             criteria other than ssn
         """
@@ -247,7 +249,8 @@ class scraper:
     # search method taking in case number as argument
     def case(self, number):
 
-        """ this case method downloads the case document using the case
+        """
+            this case method downloads the case document using the case
             number provided by the user.
         """
 

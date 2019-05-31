@@ -52,7 +52,7 @@ browser = webdriver.Chrome(executable_path = CHROMEDRIVER_PATH,
 browser.implicitly_wait(10)
 
 # import test dataset with all elected politicians
-sct = pd.read_csv('sct.csv', index_col = 0, dtype = str)
+sct = pd.read_csv('data/sct.csv', index_col = 0, dtype = str)
 
 # format case number dropping '-' and '.' and making it a list
 key = [re.sub('-|\\.', '', i) for i in list(sct['caseID'])]

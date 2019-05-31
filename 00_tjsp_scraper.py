@@ -54,7 +54,8 @@ browser.implicitly_wait(2)
 cases = {'casenumber': [], 'litigant': []}
 
 # import test dataset with all elected politicians
-candidates = pd.read_csv('candidatesUnique.csv', index_col = 0, dtype = str)
+kwargs = {'index_col': 0, 'dtype': str}
+candidates = pd.read_csv('data/candidatesUnique.csv', **kwargs)
 candidates = list(candidates['candidate.ssn'])
 limit = len(candidates)
 
@@ -73,5 +74,5 @@ for i in range(limit):
 browser.quit()
 
 # create pandas dataset from list
-pd.DataFrame(cases).to_csv('lawsuitsByCPF.csv', index = False)
+pd.DataFrame(cases).to_csv('data/lawsuitsByCPF.csv', index = False)
 

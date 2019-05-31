@@ -24,10 +24,10 @@ import tjsp
 from bs4 import BeautifulSoup
 
 # load data onto python session
-district = pd.read_csv('comarcas_sp.csv')
-ibgetse  = pd.read_csv('ibge_tse.csv')
-lawsuits = feather.read_dataframe('lawsuits.feather')
-candidateCPF = feather.read_dataframe('candidateCPF.feather')
+district = pd.read_csv('data/comarcas_sp.csv')
+ibgetse  = pd.read_csv('data/ibge_tse.csv')
+lawsuits = feather.read_dataframe('data/lawsuits.feather')
+candidateCPF = feather.read_dataframe('data/candidateCPF.feather')
 
 # join ibge, tse, and judicial district information
 # first, reduce ibge number from seven to six digits
@@ -73,4 +73,4 @@ sct = pd.merge(lawsuits, muncode, 'left', ['tj', 'tse'], indicator = True)
 sct = sct[sct['_merge'] == 'both'].drop('_merge', 1)
 
 # save dataset to file
-sct.reset_index(drop = True).to_csv('sct.csv')
+sct.reset_index(drop = True).to_csv('data/sct.csv')

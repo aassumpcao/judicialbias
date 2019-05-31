@@ -169,5 +169,5 @@ sctSummary = pd.merge(sctinfo, litigants, 'left', ['caseID', 'candidateID'])
 
 # save dataset to file
 os.chdir('..')
-sctSummary.reset_index(drop = True).to_csv('sctSummary.csv')
-sctDetails.reset_index(drop = True).to_csv('sctDetails.csv')
+sctSummary.reset_index(drop = True).to_csv('data/sctSummary.csv')
+sctDetails.reset_index(drop = True).to_csv('data/sctDetails.csv')
