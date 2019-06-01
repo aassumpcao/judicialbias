@@ -14,10 +14,8 @@
 # import statements (== packages required to run all scripts in R)
 if (!require(AER))       {install.packages('AER')}
 if (!require(extrafont)) {install.packages('extrafont')}
-if (!require(here))      {install.packages('here')}
 if (!require(lfe))       {install.packages('lfe')}
 if (!require(magrittr))  {install.packages('magrittr')}
-if (!require(pdftools))  {install.packages('pdftools')}
 if (!require(sandwich))  {install.packages('sandwich')}
 if (!require(stargazer)) {install.packages('stargazer')}
 if (!require(stopwords)) {install.packages('stopwords')}
@@ -34,8 +32,8 @@ rstudioapi::openProject('2019 Judicial Bias.Rproj')
 # nonetheless, i include all files for replication and transparency purposes if
 # you are interested in a particular step taken.
 
-# wrangle candidate data
-source('scripts/01_judicialBias_candidates.R')
+# wrangle candidate and judicial data
+source('scripts/01_tjsp_analysis_prep.R')
 
-# prepare dataset for python scraper
-source('scripts/02_judicialBias_lawsuits.R')
+# produce paper analysis
+source('scripts/02_tjsp_analysis.R')
