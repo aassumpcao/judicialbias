@@ -33,7 +33,10 @@ rstudioapi::openProject('2019 Judicial Bias.Rproj')
 # you are interested in a particular step taken.
 
 # wrangle candidate and judicial data
-source('scripts/01_tjsp_analysis_prep.R')
+source('scripts/01_tjsp_candidates.R')
+
+# wrangle candidate and judicial data
+source('scripts/02_tjsp_analysis_prep.R')
 
 # produce paper analysis
-source('scripts/02_tjsp_analysis.R')
+source('scripts/03_tjsp_analysis.R')
