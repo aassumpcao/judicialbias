@@ -19,6 +19,7 @@ if (!require(magrittr))  {install.packages('magrittr')}
 if (!require(sandwich))  {install.packages('sandwich')}
 if (!require(stargazer)) {install.packages('stargazer')}
 if (!require(stopwords)) {install.packages('stopwords')}
+if (!require(stringdist)){install.packages('stringdist')}
 if (!require(tidyverse)) {install.packages('tidyverse')}
 if (!require(xtable))    {install.packages('xtable')}
 
@@ -32,11 +33,20 @@ rstudioapi::openProject('2019 Judicial Bias.Rproj')
 # nonetheless, i include all files for replication and transparency purposes if
 # you are interested in a particular step taken.
 
-# wrangle candidate and judicial data
+# wrangle candidate data
 source('scripts/01_tjsp_candidates.R')
 
-# wrangle candidate and judicial data
-source('scripts/02_tjsp_analysis_prep.R')
+# wrangle judicial data
+source('scripts/02_tjsp_sentences.R')
+
+# wrangle judge data
+source('scripts/03_tjsp_judges.R')
+
+# wrangle municipal data
+source('scripts/04_tjsp_municipalities.R')
+
+# prepare analysis for paper
+source('scripts/05_tjsp_analysis_prep.R')
 
 # produce paper analysis
-source('scripts/03_tjsp_analysis.R')
+source('scripts/06_tjsp_analysis.R')

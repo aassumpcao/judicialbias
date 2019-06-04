@@ -1,10 +1,7 @@
 ### judicial favoritism of politicians
-# this script prepares data for analysis and matches candidates across datasets
+# this script prepares sentences for analysis
 # author: andre assumpcao
 # by andre.assumpcao@gmail.com
-
-# testing
-rm(list = ls())
 
 ### import statements
 # import packages
@@ -80,14 +77,45 @@ rm(list = objects(pattern = 'object|cl|dl|politician|def|levels'))
 ### identify case rulings for each politician in dataset
 # define row numbers to rows to keep in details dataset
 keep.rows  <- sctDetails$caseID %in% sctSummary$caseID
-sctDetails %<>% {.[keep.rows,]}
+sctDetails <- sctDetails[keep.rows,]
 
-# extract only judicial sentences in each case
-sentences  <- which(str_detect(sctDetails$values, '^Concluso'))
-sentences  <- c(sentences - 1, sentences) %>% sort()
-sctDetails %<>% {.[sentences,]}
+# # extract only judicial sentences in each case
+# sentences <- which(str_detect(sctDetails$values, '^Concluso'))
+# sentences  <- c(sentences - 1) %>% sort()
+# sctDetails <- sctDetails[sentences - 1,]
 
-# add space before capital letters
-sctDetails %>%
-  mutate(values = str_trim(str_replace_all(values,'(\\w)([A-Z])','\\1 \\2')))%>%
-  mutate(values = str_squish(str_replace_all(values, '(\\.)', '\\1 ')))
+# define keywords determining whether judge ruled in favor of claimant or
+# defendant
+convict <- 'provi(são|men)+|proced[êe]n|def[ei]r|conced[oi](d)?|conden|f[áa]vor'
+acquit  <- '(negar provimento)|(improcede)|(não conced)|(indef[ei]r)'
+dismiss <- 'extint[oa]'
+agree   <- 'ac[óo]rd(o|ão)?.*(partes|firmado)?|conciliação'
+
+# create variables based on keyword search
+sctDetails$claimant.win  <- str_detect(sctDetails$values, regex(convict, TRUE))
+sctDetails$claimant.loss <- str_detect(sctDetails$values, regex(acquit, TRUE))
+# sctDetails$case.dismiss <- str_detect(sctDetails$values, regex(dismiss, TRUE))
+# sctDetails$agreement    <- str_detect(sctDetails$values, regex(agree, TRUE))
+
+# reformat court outcome
+sctDetails %<>%
+  mutate(claimant.win = ifelse(claimant.win, 1, NA_character_)) %>%
+  mutate(claimant.loss = ifelse(claimant.loss, 1, NA_character_)) %>%
+  group_by(caseID) %>%
+  filter(!is.na(claimant.win) | !is.na(claimant.loss)) %>%
+  mutate(claimant.win = ifelse(!is.na(claimant.loss), 0, 1)) %>%
+  ungroup()
+
+# join sentence summary with outcomes
+tjspSentences <- tjspSummary %>%
+  left_join(sctDetails, 'caseID') %>%
+  select(-claimant.loss) %>%
+  group_by(caseID) %>%
+  filter(row_number() == 1) %>%
+  ungroup()
+
+# save to file
+save(tjspSentences, file = 'data/tjspSentences.Rda')
+
+# remove everything for serial sourcing
+rm(list = ls())

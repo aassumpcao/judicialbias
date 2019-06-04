@@ -6,6 +6,9 @@
 # author: andre assumpcao
 # by andre.assumpcao@gmail.com
 
+# testing
+rm(list = ls())
+
 ### import statements
 # import packages
 library(tidyverse)
@@ -79,14 +82,12 @@ vacancies %<>%
   mutate_all(as.character)
 
 # create joinkey3
-joinkey3 <- c('election.ID' = 'SIGLA_UE', 'election.year' = 'ANO_ELEICAO',
-              'office.ID')
+joinkey3 <- c('election.ID', 'election.year', 'office.ID')
 
 # create final dataset with SP candidates and their results
 tseCandidates %<>%
   left_join(vacancies, by = joinkey3) %>%
-  filter(!is.na(election.year)) %>%
-  select(1:33, 57) %>%
+  select(1:33, 58) %>%
   group_by(election.year, candidate.ssn) %>%
   filter(rank == max(rank)) %>%
   filter(n() == 1) %>%
