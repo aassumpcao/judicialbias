@@ -11,10 +11,13 @@ rm(list = ls())
 library(tidyverse)
 library(magrittr)
 
+# load data
+load('data/tseCandidates.Rda')
+load('data/tjspSentences.Rda')
+
 # join tjsp and tse data
-tjsp %>%
-  left_join(tseCandidates, c('candidateID.x' = 'scraper.id')) %>%
+tjspSentences %>%
+  left_join(ungroup(tseCandidates), c('candidateID.x' = 'scraper.id')) %>%
   filter(!is.na(claimant.win)) %>%
-  filter(class == 'Procedimento do Juizado Especial Cível') %>%
-  View()
+  filter(class == 'Procedimento do Juizado Especial Cível')
 

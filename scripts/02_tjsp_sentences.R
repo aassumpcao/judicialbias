@@ -1,5 +1,5 @@
 ### judicial favoritism of politicians
-# this script prepares sentences for analysis
+# this script wrangles sentences data
 # author: andre assumpcao
 # by andre.assumpcao@gmail.com
 

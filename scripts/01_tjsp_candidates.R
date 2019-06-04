@@ -1,13 +1,7 @@
 ### judicial favoritism of politicians
-# section wrangling
-#   this script wrangles electoral results data at the lowest-level possible
-#   (the electoral section). the work here is necessary to recover vote counts
-#   for politicians.
+# this script wrangles candidate data
 # author: andre assumpcao
 # by andre.assumpcao@gmail.com
-
-# testing
-rm(list = ls())
 
 ### import statements
 # import packages
@@ -56,7 +50,6 @@ section <- bind_rows(sections2004, sections2008, sections2012, sections2016) %>%
   ungroup() %>%
   mutate_all(as.character) %>%
   filter(!(NUM_VOTAVEL %in% c(95, 96, 97))) %>%
-  mutate(candidate.votes = as.numeric(votes)) %>%
   arrange(SIGLA_UE, ANO_ELEICAO, CODIGO_CARGO, NUM_TURNO, desc(votes)) %>%
   group_by(SIGLA_UE, ANO_ELEICAO, CODIGO_CARGO, NUM_TURNO) %>%
   mutate(rank = row_number())
@@ -69,8 +62,9 @@ tseCandidates <- candidatesSP %>%
   select(-candidate.plaintiff, -trial.outcome, -exp) %>%
   left_join(section, by = joinkey2) %>%
   filter(!is.na(votes.x) | !is.na(votes.y)) %>%
-  mutate(votes = ifelse(is.na(votes.x), votes.y, votes.x)) %>%
+  mutate(candidate.votes = ifelse(is.na(votes.x), votes.y, votes.x)) %>%
   select(-votes.x, -CODIGO_CARGO, -votes.y)
+
 
 # edit vacancies dataset before joining onto sections
 vacancies %<>%
@@ -87,15 +81,22 @@ joinkey3 <- c('election.ID', 'election.year', 'office.ID')
 # create final dataset with SP candidates and their results
 tseCandidates %<>%
   left_join(vacancies, by = joinkey3) %>%
-  select(1:33, 58) %>%
+  select(1:33, 57) %>%
   group_by(election.year, candidate.ssn) %>%
   filter(rank == max(rank)) %>%
   filter(n() == 1) %>%
-  mutate(candidate.elected = ifelse(rank >= office.vacancies, 1, 0)) %>%
-  select(-rank, -votes) %>%
-  select(matches('^elect'), matches('^off'), matches('^candidate'),
-    matches('^candidacy'), everything()
-  )
+  ungroup() %>%
+  mutate_at(vars(election.votes, office.vacancies), as.integer) %>%
+  mutate(
+    election.votes = case_when(office.ID == 11 ~ floor(election.votes / 2),
+    office.ID == 13 ~ floor(election.votes / office.vacancies))
+  ) %>%
+  mutate(candidate.elected = ifelse(candidate.votes >= election.votes, 1, 0))%>%
+  select(
+    matches('^elect'), matches('^off'), matches('^candidate'),
+    matches('^candidacy'), everything(), -rank
+  ) %>%
+  mutate_all(as.character)
 
 # save dataset to file
 save(tseCandidates, file = 'data/tseCandidates.Rda')

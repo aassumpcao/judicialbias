@@ -1,7 +1,5 @@
 ### judicial favoritism of politicians
-# candidates wrangling
-#   this script wrangles the candidates in all local elections in São Paulo
-#   between 2004 and 2016.
+# this script produces paper analysis
 # author: andre assumpcao
 # email:  andre.assumpcao@gmail.com
 
