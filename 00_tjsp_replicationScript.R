@@ -44,11 +44,8 @@ source('scripts/02_tjsp_sentences.R')
 # wrangle judge data
 source('scripts/03_tjsp_judges.R')
 
-# wrangle municipal data
-source('scripts/04_tjsp_municipalities.R')
-
 # prepare analysis for paper
-source('scripts/05_tjsp_analysis_prep.R')
+source('scripts/04_tjsp_analysis_prep.R')
 
 # produce paper analysis
-source('scripts/06_tjsp_analysis.R')
+source('scripts/05_tjsp_analysis.R')

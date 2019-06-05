@@ -16,6 +16,7 @@ load('data/candidatesSP.Rda')
 load('data/sctSummary.Rda')
 load('data/sctDetails.Rda')
 
+
 ### body
 # drop useless variables
 candidatesSP %<>% select(-candidate.plaintiff, -trial.outcome)
