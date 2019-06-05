@@ -9,7 +9,6 @@ rm(list = ls())
 ### import statements
 # import packages
 library(magrittr)
-library(readr)
 library(tidyverse)
 
 # load data
