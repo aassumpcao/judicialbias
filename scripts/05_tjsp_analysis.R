@@ -45,24 +45,36 @@ tjspAnalysis %<>%
   mutate_at(vars(factors), as.factor) %>%
   mutate(judge.gender = judge.gender %>% {ifelse(. == 'Female', 0, 1)})
 
+# filling in missing values for analysis (always median)
+missing.claims <- median(as.numeric(tjspAnalysis$case.claim), na.rm = TRUE)
+tjspAnalysis[is.na(tjspAnalysis$case.claim), 'case.claim'] <- missing.claims
+
+# fix claims with errors (> 40,000)
+tjspAnalysis %<>%
+  mutate(case.claim = case.claim %>% {ifelse(. > 40000, missing.claims, .)})
+
+# fix median tenure time
+missing.tenure <- median(as.numeric(tjspAnalysis$judge.tenure), na.rm = TRUE)
+tjspAnalysis[is.na(tjspAnalysis$judge.tenure), 'judge.tenure'] <- missing.tenure
+
 ### tables and analysis
-# produce summary statistics table
+# produce summary statistics table (case level)
 stargazer(
 
   # summmary table
-  as.data.frame(tjspAnalysis[, covariates[1:3]]),
+  as.data.frame(tjspAnalysis[, covariates[1:2]]),
 
   # table cosmetics
-  type = 'text',
+  type = 'latex',
   title = 'Descriptive Statistics',
   style = 'default',
   summary = TRUE,
   # out = 'tables/sumstats.tex',
   out.header = FALSE,
-  covariate.labels = covarLabel,
+  covariate.labels = covarLabel[1:2],
   align = FALSE,
   digit.separate = 3,
-  digits = 3,
+  digits = 0,
   digits.extra = 0,
   font.size = 'scriptsize',
   header = FALSE,
@@ -74,3 +86,69 @@ stargazer(
   summary.logical = TRUE,
   summary.stat = c('n', 'mean', 'sd', 'min', 'max')
 )
+# produce summary statistics table (judge level)
+tjspAnalysis %>%
+  select(5, covariates[3:5]) %>%
+  group_by(case.judge) %>%
+  filter(row_number() == 1) %>%
+  {stargazer(
+
+    # summmary table
+    as.data.frame(.),
+
+    # table cosmetics
+    type = 'latex',
+    title = 'Descriptive Statistics',
+    style = 'default',
+    summary = TRUE,
+    # out = 'tables/sumstats.tex',
+    out.header = FALSE,
+    covariate.labels = covarLabel[3:5],
+    align = FALSE,
+    digit.separate = 3,
+    digits = 3,
+    digits.extra = 3,
+    font.size = 'scriptsize',
+    header = FALSE,
+    initial.zero = FALSE,
+    model.names = FALSE,
+    label = 'tab:sumstats',
+    no.space = FALSE,
+    table.placement = '!htbp',
+    summary.logical = TRUE,
+    summary.stat = c('n', 'mean', 'sd', 'min', 'max')
+  )
+}
+# produce summary statistics table
+tjspAnalysis %>%
+  select(candidate.ssn, covariates[6:10]) %>%
+  group_by(candidate.ssn) %>%
+  filter(row_number() == 1) %>%
+  {stargazer(
+
+    # summmary table
+    as.data.frame(.),
+
+    # table cosmetics
+    type = 'latex',
+    title = 'Descriptive Statistics',
+    style = 'default',
+    summary = TRUE,
+    # out = 'tables/sumstats.tex',
+    out.header = FALSE,
+    covariate.labels = covarLabel[6:10],
+    align = FALSE,
+    digit.separate = 3,
+    digits = 3,
+    digits.extra = 0,
+    font.size = 'scriptsize',
+    header = FALSE,
+    initial.zero = FALSE,
+    model.names = FALSE,
+    label = 'tab:sumstats',
+    no.space = FALSE,
+    table.placement = '!htbp',
+    summary.logical = TRUE,
+    summary.stat = c('n', 'mean', 'sd', 'min', 'max')
+  )
+}
