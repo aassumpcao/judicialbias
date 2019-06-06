@@ -92,19 +92,19 @@ tjspPay %<>%
 # join dataset
 tjspJudges %<>%
   {fuzzyjoin::regex_left_join(tjspPay, ., by = c('Nome' = 'names'))} %>%
-  slice(-1148, -2110) %>%
-  mutate(tenure.start = ifelse(
-    is.na(tenure.start), median(tenure.start, na.rm = TRUE), tenure.start
-    )
+  slice(-6, -1323, -2283, -2285) %>%
+  distinct(Nome, .keep_all = TRUE) %>%
+  mutate(tenure.start = ifelse(is.na(tenure.start), '16/07/1993', tenure.start)
   ) %>%
   transmute(judge.name = str_to_title(Nome), judge.pay = `Rendimento Liquido`,
-    judge.tenure.start = tenure.start)
+    judge.tenure.start = tenure.start
+  )
 
 # guess judge gender
 tjspJudges$judge.gender <- genderBR::get_gender(tjspJudges$judge.name)
 
 # manually fill in judges searching their names on google
-gender <- c('Male', 'Female', rep('Male', 2), 'Female', rep('Male', 6),
+gender <- c('Female', 'Male', 'Female', rep('Male', 2), 'Female', rep('Male',6),
             'Female', rep('Male', 9), 'Female', rep('Male', 12), 'Female',
             rep('Male', 3))
 

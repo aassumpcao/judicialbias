@@ -10,7 +10,6 @@ rm(list = ls())
 # import packages
 library(tidyverse)
 library(magrittr)
-library(fuzzyjoin)
 
 # load data
 load('data/tseCandidates.Rda')
@@ -64,27 +63,7 @@ tjspAnalysis %<>%
 # reformat judge spelling in tjsp pay database
 tjspJudges$judge.name %<>% str_to_lower()
 
-#
-test0 <- fuzzyjoin::fuzzy_inner_join(
-  tjspAnalysis, tjspJudges, joinkey, match_fun = str_detect
-)
-
-test1 <- fuzzyjoin::fuzzy_anti_join(
-  tjspAnalysis, tjspJudges, joinkey, match_fun = str_detect
-)
-
-# cap judge names at a maximum of 53 characters
-tjspJudges %>%
-  mutate(judge = str_sub(judge.name, 1, 53)) %>%
-  {fuzzy_inner_join(
-    filter(tjspAnalysis, !is.na(judge)), ., 'judge', match_fun = str_detect
-  )}
-
-
-
-
-nchar(tjspAnalysis$judge) %>% min(na.rm = TRUE)
-nchar(tjspAnalysis$judge) %>% max(na.rm = TRUE)
-
-nchar(tjspJudges$judge.name) %>% min()
-nchar(tjspJudges$judge.name) %>% max()
+# match judge individual information onto sentences and electoral data
+tjspAnalysis %>%
+  fuzzyjoin::fuzzy_left_join(tjspJudges, joinkey, match_fun = str_detect) %>%
+  mutate(judge.pay = judge.pay %>% {ifelse(is.na(.), '35023.25', .)})
