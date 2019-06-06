@@ -2,19 +2,18 @@
 # this script prepares all data for analysis
 # author: andre assumpcao
 # by andre.assumpcao@gmail.com
-
+rm(list=ls())
 ### import statements
 # import packages
 library(tidyverse)
 library(magrittr)
 
 # load data
-load('data/tseCandidates.Rda')
-load('data/tjspSentences.Rda')
-load('data/tjspJudges.Rda')
 load('data/campaign.Rda')
-tjspMun <- read_csv('data/sct.csv', locale = locale(encoding = 'latin1'),
-  trim_ws = TRUE, col_types = cols(.default = 'c')) %>% select(-1)
+load('data/tjspJudges.Rda')
+load('data/tjspMun.Rda')
+load('data/tjspSentences.Rda')
+load('data/tseCandidates.Rda')
 
 ### wrangle datasets
 # join tjsp and tse data
@@ -66,8 +65,16 @@ tjspAnalysis %<>%
   mutate(judge.pay = judge.pay %>% {ifelse(is.na(.), '35023.25', .)}) %>%
   mutate_at(vars(4, 15, 55), ~as.Date(., '%d/%m/%Y')) %>%
   mutate(t = as.numeric(updates - judge.tenure.start)) %>%
-  mutate(judge.tenure = t %>% {ifelse(. < 1, median(., na.rm = TRUE), .)}) %>%
-  select(-t)
+  mutate(c = as.numeric(updates - assignment)) %>%
+  mutate(judge.tenure  = t %>% {ifelse(. < 1, median(., na.rm = TRUE), .)}) %>%
+  mutate(case.duration = c %>% {ifelse(. < 1, median(., na.rm = TRUE), .)}) %>%
+  select(-t, -c)
+
+# fill in missing gender of judges
+names <- tjspAnalysis[is.na(tjspAnalysis$judge.gender), 'judge'] %>% unlist()
+names %<>% {ifelse(str_detect(., 'carlos'), 'Male', 'Female')}
+names[is.na(names)] <- 'Male'
+tjspAnalysis[is.na(tjspAnalysis$judge.gender), 'judge.gender'] <- names
 
 # anonymize judges
 tjspAnalysis %<>% {mutate(., judge = group_indices(., judge))}

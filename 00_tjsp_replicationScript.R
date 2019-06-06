@@ -47,5 +47,12 @@ source('scripts/03_tjsp_judges.R')
 # prepare analysis for paper
 source('scripts/04_tjsp_analysis_prep.R')
 
+# python3.7: install packages from requirements.txt to run the next script.
+system2('cat scripts/requirements.txt | xargs -n 1 pip install')
+
+# python3.7: create judicial outcome  algorithm from all sentences. this
+# script takes 25 hours to run on a big memory (500g) cluster. use with caution.
+system2('python scripts/99_tjsp_sct_outcome.py &')
+
 # produce paper analysis
 source('scripts/05_tjsp_analysis.R')

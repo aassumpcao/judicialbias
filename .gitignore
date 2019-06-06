@@ -44,7 +44,6 @@ __pycache__/
 data/
 olddata/
 unused/
-unused2/
 
 # Ignore CSV files
 *.csv
