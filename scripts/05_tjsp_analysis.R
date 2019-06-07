@@ -37,6 +37,7 @@ covarLabel <- c('Case Duration (in days)', 'Amount Claimed (in R$)',
 integers <- c(6, 9, 11, 19, 24, 30:31, 33, 35)
 factors  <- c(3, 5, 12, 14:16, 25:29, 34, 36, 37)
 
+### wrangle variables one final time
 # change variable types
 tjspAnalysis %<>%
   mutate(case.claim = str_replace_all(case.claim, '\\.|R\\$', '')) %>%
@@ -56,6 +57,14 @@ tjspAnalysis %<>%
 # fix median tenure time
 missing.tenure <- median(as.numeric(tjspAnalysis$judge.tenure), na.rm = TRUE)
 tjspAnalysis[is.na(tjspAnalysis$judge.tenure), 'judge.tenure'] <- missing.tenure
+
+# create outcome variable for case ruling
+tjspAnalysis %<>%
+  mutate(sct.favorable = case_when(
+    case.claimant.win == 1 & str_detect(candidate.litigant.type,'Claimant')~ 1,
+    case.claimant.win == 0 & str_detect(candidate.litigant.type,'Defendant')~ 1,
+  )) %>%
+  replace_na(list(sct.favorable = 0))
 
 ### tables and analysis
 # produce summary statistics table (case level)
@@ -151,4 +160,63 @@ tjspAnalysis %>%
     summary.logical = TRUE,
     summary.stat = c('n', 'mean', 'sd', 'min', 'max')
   )
+}
+
+### regression tables
+# abrams et al (2012) random assignment test. we create a random assignment
+# dataset to use as a baseline distribution against which we compare the empi-
+# rical realization of my own sample
+# steps:
+# 1. count cases by judge and court
+# 2. group cases by court
+# 3. draw random cases from 2 and fill in columns in 1
+# 4. compute mean by judge and court
+# 5. compute iqr across all observations
+# 6. repeat 1,000 times
+
+# 1. compute the number of cases by judge per court
+cases <- count(tjspAnalysis, case.judge) %>%
+         left_join(tjspAnalysis, 'case.judge') %>%
+         select(1:2, tjsp.ID) %>%
+         distinct(case.judge, .keep_all = TRUE)
+
+# 2. group cases by court to create sample from which to pull observations
+fromCourts <- function(court, n, var, ...){
+  # create sliced dataset from court ID
+  df <- filter(tjspAnalysis, tjsp.ID == as.character(court))
+  # draw the number of observations from dataset
+  sim <- sample_n(select(tjspAnalysis, var), as.integer(n), ...)
+  # assign new name to variables
+  sim <- unname(unlist(sim))
+  # return call
+  return(sim)
+}
+
+# draw random cases from 2, fill in columns in 1, and calculate iqr 1000 times.
+# DISCLAIMER: 15 minutes running time
+# create vector of simulated iqr
+simulated.iqr <- c()
+
+# execute loop creating monte carlo simulation
+for (x in 1:1000) {
+  # create vector containing simulation results
+  simulations <- c()
+
+  # execute loop to create simulations
+  for (i in 1:nrow(cases)) {
+    # create list of arguments
+    args <- list(cases[i, 3], cases[i, 2], 'candidate.age', replace = TRUE)
+    # call to fromCourts using args from cases
+    row <- do.call(fromCourts, args)
+    # bind onto vector
+    simulations <- c(simulations, row)
+  }
+  # convert to numeric
+  simulations <- as.integer(simulations)
+
+  # extract iqr
+  simulated.iqr <- c(simulated.iqr, IQR(simulations))
+
+  # print progress
+  if (x %% 100 == 0) {print(x)}
 }
