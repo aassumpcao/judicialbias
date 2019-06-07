@@ -18,6 +18,7 @@ library(xtable)
 
 # load data
 load('data/tjspFinal.Rda')
+load('data/randomAssignment.Rda')
 
 ### function definitions
 # (blank)
@@ -61,7 +62,7 @@ tjspAnalysis[is.na(tjspAnalysis$judge.tenure), 'judge.tenure'] <- missing.tenure
 # create outcome variable for case ruling
 tjspAnalysis %<>%
   mutate(sct.favorable = case_when(
-    case.claimant.win == 1 & str_detect(candidate.litigant.type,'Claimant')~ 1,
+    case.claimant.win == 1 & str_detect(candidate.litigant.type,'Claimant') ~ 1,
     case.claimant.win == 0 & str_detect(candidate.litigant.type,'Defendant')~ 1,
   )) %>%
   replace_na(list(sct.favorable = 0))
@@ -162,7 +163,7 @@ tjspAnalysis %>%
   )
 }
 
-### regression tables
+### analysis tables
 # abrams et al (2012) random assignment test. we create a random assignment
 # dataset to use as a baseline distribution against which we compare the empi-
 # rical realization of my own sample
@@ -178,45 +179,116 @@ tjspAnalysis %>%
 cases <- count(tjspAnalysis, case.judge) %>%
          left_join(tjspAnalysis, 'case.judge') %>%
          select(1:2, tjsp.ID) %>%
+         mutate(tjsp.ID = as.character(tjsp.ID)) %>%
          distinct(case.judge, .keep_all = TRUE)
 
 # 2. group cases by court to create sample from which to pull observations
-fromCourts <- function(court, n, var, ...){
+fromCourts <- function(court, n, var, ...) {
   # create sliced dataset from court ID
-  df <- filter(tjspAnalysis, tjsp.ID == as.character(court))
+  df <- filter(tjspAnalysis, tjsp.ID == court)
   # draw the number of observations from dataset
-  sim <- sample_n(select(tjspAnalysis, var), as.integer(n), ...)
+  sim <- sample_n(df[, var], as.integer(n), ...)
   # assign new name to variables
   sim <- unname(unlist(sim))
   # return call
   return(sim)
 }
 
-# draw random cases from 2, fill in columns in 1, and calculate iqr 1000 times.
-# DISCLAIMER: 15 minutes running time
-# create vector of simulated iqr
-simulated.iqr <- c()
+# # draw random cases from 2, fill in columns in 1, and calculate moments 1000
+# # times (steps 3, 4, and 5 at once). DISCLAIMER: 15 minutes running time.
+# # create vector of simulated mean and iqr
+# simulated.mean <- c()
+# simulated.iqr  <- c()
 
-# execute loop creating monte carlo simulation
-for (x in 1:1000) {
-  # create vector containing simulation results
-  simulations <- c()
+# # execute loop creating monte carlo simulation
+# for (x in 1:1000) {
+#   # create vector containing simulation results
+#   simulations <- c()
+#   # execute loop to create simulations
+#   for (i in 1:nrow(cases)) {
+#     # create list of arguments
+#     args <- list(cases[i, 3], as.character(cases[i, 2]), 'candidate.age',
+#                  replace = TRUE)
+#     # call to fromCourts using args from cases
+#     row <- do.call(fromCourts, args)
+#     # bind onto vector
+#     simulations <- c(simulations, row)
+#   }
+#   # convert to numeric
+#   simulations <- as.numeric(simulations)
+#   # extract mean and iqr
+#   simulated.mean <- c(simulated.mean, mean(simulations))
+#   simulated.iqr  <- c(simulated.iqr, IQR(simulations))
+#   # print progress
+#   if (x %% 100 == 0) {print(x)}
+# }
 
-  # execute loop to create simulations
-  for (i in 1:nrow(cases)) {
-    # create list of arguments
-    args <- list(cases[i, 3], cases[i, 2], 'candidate.age', replace = TRUE)
-    # call to fromCourts using args from cases
-    row <- do.call(fromCourts, args)
-    # bind onto vector
-    simulations <- c(simulations, row)
-  }
-  # convert to numeric
-  simulations <- as.integer(simulations)
+# # create dataset with simulated data
+# randomAssignment <- tibble(simulation = 1:1000, simulated.mean, simulated.iqr)
 
-  # extract iqr
-  simulated.iqr <- c(simulated.iqr, IQR(simulations))
+# # save to avoid resampling
+# save(randomAssignment, file = 'data/tjspSimulation.Rda')
 
-  # print progress
-  if (x %% 100 == 0) {print(x)}
-}
+# extract moment distributions from datasets
+simulated.iqr  <- unlist(randomAssignment$simulated.iqr)
+simulated.mean <- unlist(randomAssignment$simulated.mean)
+empiricalIQR   <- IQR(tjspAnalysis$candidate.age)
+empiricalMean  <- mean(tjspAnalysis$candidate.age)
+iqr95CI        <- quantile(simulated.iqr, probs = c(.05, .95))
+mean95CI       <- quantile(simulated.mean, probs = c(.05, .95))
+
+# build iqr plot
+ggplot(randomAssignment, aes(x = simulated.iqr)) +
+  geom_histogram(bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
+  scale_x_continuous(breaks = seq(2, 30, 2)) +
+  scale_y_continuous(breaks = seq(0, 105, 15)) +
+  geom_col(aes(x = empiricalIQR, y = .1), color = 'black') +
+  geom_segment(
+    aes(x = iqr95CI[1], xend = iqr95CI[1], y = -5, yend = 105), size = 1) +
+  geom_segment(
+    aes(x = iqr95CI[2], xend = iqr95CI[2], y = -5, yend = 105), size = 1) +
+  labs(y = 'Density', x = 'Interquartile Range (Candidate Age)') +
+  theme_bw() +
+  theme(axis.title = element_text(size = 10),
+        axis.title.y = element_text(margin = margin(r = 12)),
+        axis.title.x = element_text(margin = margin(t = 12)),
+        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        text = element_text(family = 'LM Roman 10'),
+        panel.border = element_rect(color = 'black', size = 1),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'grey79')
+  )
+
+# save plot
+ggsave('iqr.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+       width = 7, height = 5)
+
+# build mean plot
+ggplot(randomAssignment, aes(x = simulated.mean)) +
+  geom_histogram(bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
+  scale_x_continuous(breaks = seq(30, 55, 2.5)) +
+  scale_y_continuous(breaks = seq(0, 105, 15)) +
+  geom_col(aes(x = empiricalMean, y = .1), color = 'black') +
+  geom_segment(
+    aes(x = mean95CI[1], xend = mean95CI[1], y = -5, yend = 105), size = 1) +
+  geom_segment(
+    aes(x = mean95CI[2], xend = mean95CI[2], y = -5, yend = 105), size = 1) +
+  labs(y = 'Density', x = 'Mean (Candidate Age)') +
+  theme_bw() +
+  theme(axis.title = element_text(size = 10),
+        axis.title.y = element_text(margin = margin(r = 12)),
+        axis.title.x = element_text(margin = margin(t = 12)),
+        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        text = element_text(family = 'LM Roman 10'),
+        panel.border = element_rect(color = 'black', size = 1),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'grey79')
+  )
+
+# save plot
+ggsave('mean.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+       width = 7, height = 5)
