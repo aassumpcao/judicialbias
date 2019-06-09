@@ -18,7 +18,8 @@ library(xtable)
 
 # load data
 load('data/tjspFinal.Rda')
-load('data/randomAssignment.Rda')
+load('data/tjspSimulation1.Rda')
+load('data/tjspSimulation2.Rda')
 
 ### function definitions
 # (blank)
@@ -185,9 +186,9 @@ cases <- count(tjspAnalysis, case.judge) %>%
 # 2. group cases by court to create sample from which to pull observations
 fromCourts <- function(court, n, var, ...) {
   # create sliced dataset from court ID
-  df <- filter(tjspAnalysis, tjsp.ID == court)
+  df <- filter(tjspAnalysis, tjsp.ID == court) %>% select(var)
   # draw the number of observations from dataset
-  sim <- sample_n(df[, var], as.integer(n), ...)
+  sim <- sample_n(df, as.integer(n), ...)
   # assign new name to variables
   sim <- unname(unlist(sim))
   # return call
@@ -195,48 +196,95 @@ fromCourts <- function(court, n, var, ...) {
 }
 
 # # draw random cases from 2, fill in columns in 1, and calculate moments 1000
-# # times (steps 3, 4, and 5 at once). DISCLAIMER: 15 minutes running time.
+# # times (steps 3, 4, and 5 at once). DISCLAIMER: 25 minutes running time.
 # # create vector of simulated mean and iqr
-# simulated.mean <- c()
-# simulated.iqr  <- c()
+# simulated.mean <- tibble(.rows = 5262)
+# outcome.mean   <- tibble(.rows = 5262)
 
-# # execute loop creating monte carlo simulation
+# # execute loop creating monte carlo simulation for covariate age
 # for (x in 1:1000) {
 #   # create vector containing simulation results
-#   simulations <- c()
+#   simulats <- c()
+#   outcomes <- c()
 #   # execute loop to create simulations
 #   for (i in 1:nrow(cases)) {
 #     # create list of arguments
-#     args <- list(cases[i, 3], as.character(cases[i, 2]), 'candidate.age',
+#     args <- list(as.character(cases[i, 3]), cases[i, 2], 'candidate.age',
 #                  replace = TRUE)
 #     # call to fromCourts using args from cases
 #     row <- do.call(fromCourts, args)
+#     # replace list elements
+#     args[[3]] <- 'sct.favorable'
+#     # call to fromCourts to build outcome
+#     outcome <- do.call(fromCourts, args)
 #     # bind onto vector
-#     simulations <- c(simulations, row)
+#     simulats <- c(simulats, row)
+#     outcomes <- c(outcomes, outcome)
 #   }
 #   # convert to numeric
-#   simulations <- as.numeric(simulations)
+#   simulats <- as.numeric(simulats)
+#   outcomes <- as.integer(outcomes)
 #   # extract mean and iqr
-#   simulated.mean <- c(simulated.mean, mean(simulations))
-#   simulated.iqr  <- c(simulated.iqr, IQR(simulations))
+#   simulated.mean <- bind_cols(simulated.mean, sim = simulats)
+#   outcome.mean   <- bind_cols(outcome.mean, sim = outcomes)
 #   # print progress
 #   if (x %% 100 == 0) {print(x)}
 # }
 
-# # create dataset with simulated data
-# randomAssignment <- tibble(simulation = 1:1000, simulated.mean, simulated.iqr)
+# # save dataset
+# save(simulated.mean, file = 'data/tjspSimulation1.Rda')
+# save(outcome.mean,   file = 'data/tjspSimulation2.Rda')
 
-# # save to avoid resampling
-# save(randomAssignment, file = 'data/tjspSimulation.Rda')
+# uncount variables
+ids <- uncount(cases, n)
 
-# extract moment distributions from datasets
-simulated.iqr  <- unlist(randomAssignment$simulated.iqr)
-simulated.mean <- unlist(randomAssignment$simulated.mean)
-empiricalIQR   <- IQR(tjspAnalysis$candidate.age)
-empiricalMean  <- mean(tjspAnalysis$candidate.age)
-iqr95CI        <- quantile(simulated.iqr, probs = c(.05, .95))
-mean95CI       <- quantile(simulated.mean, probs = c(.05, .95))
+# bind to simulations and change order of variables
+simulated.mean %<>% bind_cols(ids) %>% select(1001, 1:1000)
+outcome.mean   %<>% bind_cols(ids) %>% select(1001, 1:1000)
 
+# summarize covariate and outcome by mean following abrams et al (2012)
+age.simulation <- simulated.mean %>%
+  group_by(case.judge) %>%
+  summarize_all(mean) %>%
+  select(-1)
+sct.simulation <- outcome.mean %>%
+  group_by(case.judge) %>%
+  summarize_all(mean) %>%
+  select(-1)
+
+# extract moment distributions from simulated and empirical datasets
+age.mean <- age.simulation %>%
+  t() %>%
+  as_tibble(.name_repair = 'universal') %>%
+  summarize_all(mean) %>%
+  unlist() %>%
+  unname()
+sct.mean <- sct.simulation %>%
+  t() %>%
+  as_tibble(.name_repair = 'universal') %>%
+  summarize_all(mean) %>%
+  unlist() %>%
+  unname()
+
+# extract moment distributions from simulated datasets
+simulated.age.mean.ci <- quantile(age.mean, probs = c(.05, .95))
+simulated.sct.mean.ci <- quantile(sct.mean, probs = c(.05, .95))
+
+# compute the 1,000 iqr for both distributions
+age.iqr <- age.simulation %>% as.list() %>% lapply(IQR) %>% unlist()
+sct.iqr <- sct.simulation %>% as.list() %>% lapply(IQR) %>% unlist()
+
+# narrow down dataset to age and sct outcome variables
+empirical.moments <- tjspAnalysis %>%
+  group_by(case.judge) %>%
+  select(candidate.age, sct.favorable)
+
+# extract moment distributions from empirical dataset
+empirical.age.mean.ci <- mean(unlist(empirical.moments[,2]))
+empirical.age.iqr.ci  <- IQR(unlist(empirical.moments[,2]))
+empirical.sct.mean.ci <- mean(unlist(empirical.moments[,3]))
+
+### produce random assignment graphs
 # build iqr plot
 ggplot(randomAssignment, aes(x = simulated.iqr)) +
   geom_histogram(bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
@@ -262,7 +310,7 @@ ggplot(randomAssignment, aes(x = simulated.iqr)) +
   )
 
 # save plot
-ggsave('iqr.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+ggsave('iqr-age.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
        width = 7, height = 5)
 
 # build mean plot
@@ -290,5 +338,39 @@ ggplot(randomAssignment, aes(x = simulated.mean)) +
   )
 
 # save plot
-ggsave('mean.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+ggsave('mean-age.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+       width = 7, height = 5)
+
+### produce random outcomes graph
+# extract moment distributions from datasets
+outcome.mean  <- unlist(randomAssignment$outcome.mean)
+empiricalMean <- mean(tjspAnalysis$sct.favorable)
+mean95CI      <- quantile(outcome.mean, probs = c(.05, .95))
+
+# build mean plot
+ggplot(randomAssignment, aes(x = outcome.mean)) +
+  geom_histogram(bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
+  scale_x_continuous(breaks = seq(.5, .7, .01)) +
+  scale_y_continuous(breaks = seq(0, 120, 15)) +
+  # geom_col(aes(x = empiricalMean, y = .1), color = 'black') +
+  geom_segment(
+    aes(x = mean95CI[1], xend = mean95CI[1], y = -5, yend = 105), size = 1) +
+  geom_segment(
+    aes(x = mean95CI[2], xend = mean95CI[2], y = -5, yend = 105), size = 1) +
+  labs(y = 'Density', x = 'Mean (Candidate Age)') +
+  theme_bw() +
+  theme(axis.title = element_text(size = 10),
+        axis.title.y = element_text(margin = margin(r = 12)),
+        axis.title.x = element_text(margin = margin(t = 12)),
+        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        text = element_text(family = 'LM Roman 10'),
+        panel.border = element_rect(color = 'black', size = 1),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'grey79')
+  )
+
+# save plot
+ggsave('mean-outcome.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
        width = 7, height = 5)
