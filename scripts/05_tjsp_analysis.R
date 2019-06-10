@@ -267,35 +267,73 @@ sct.mean <- sct.simulation %>%
   unname()
 
 # extract moment distributions from simulated datasets
-simulated.age.mean.ci <- quantile(age.mean, probs = c(.05, .95))
-simulated.sct.mean.ci <- quantile(sct.mean, probs = c(.05, .95))
+age.ci <- quantile(age.mean, probs = c(.05, .95))
+sct.mean.ci <- quantile(sct.mean, probs = c(.05, .95))
 
 # compute the 1,000 iqr for both distributions
-age.iqr <- age.simulation %>% as.list() %>% lapply(IQR) %>% unlist()
-sct.iqr <- sct.simulation %>% as.list() %>% lapply(IQR) %>% unlist()
+age.iqr <- age.simulation %>% summarize_all(IQR) %>% unlist() %>% unname()
+sct.iqr <- sct.simulation %>% summarize_all(IQR) %>% unlist() %>% unname()
 
 # narrow down dataset to age and sct outcome variables
 empirical.moments <- tjspAnalysis %>%
   group_by(case.judge) %>%
   select(candidate.age, sct.favorable)
 
-# extract moment distributions from empirical dataset
-empirical.age.mean.ci <- mean(unlist(empirical.moments[,2]))
-empirical.age.iqr.ci  <- IQR(unlist(empirical.moments[,2]))
-empirical.sct.mean.ci <- mean(unlist(empirical.moments[,3]))
+# extract moment distributions from empirical dataset (age)
+empirical.age.iqr <- empirical.moments %>%
+  group_by(case.judge) %>%
+  summarize_all(mean) %>%
+  summarize_all(IQR) %>%
+  {unlist(.[,2])} %>%
+  unname()
+empirical.age.mean <- age.simulation %>%
+  summarize_all(mean) %>%
+  unlist() %>%
+  mean()
 
-### produce random assignment graphs
-# build iqr plot
-ggplot(randomAssignment, aes(x = simulated.iqr)) +
-  geom_histogram(bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
-  scale_x_continuous(breaks = seq(2, 30, 2)) +
-  scale_y_continuous(breaks = seq(0, 105, 15)) +
-  geom_col(aes(x = empiricalIQR, y = .1), color = 'black') +
+# extract moment distributions from empirical dataset (sct favorable)
+empirical.sct.iqr <- empirical.moments %>%
+  group_by(case.judge) %>%
+  summarize_all(mean) %>%
+  summarize_all(IQR) %>%
+  {unlist(.[,3])} %>%
+  unname()
+empirical.sct.mean <- sct.simulation %>%
+  summarize_all(mean) %>%
+  unlist() %>%
+  mean()
+
+# manually try out quantiles for age
+iqr.significant <- quantile(age.iqr, probs = c(.05))
+age.iqr.signif  <- quantile(age.iqr, probs = c(.0649002)) %>%
+                   names() %>%
+                   str_remove('\\%$') %>%
+                   {as.numeric(.) / 100} %>%
+                   round(digits = 3) %>%
+                   {str_remove(as.character(.), '^0{1}')}
+
+# manually try out quantiles for age
+iqr.significant <- quantile(sct.iqr, probs = c(.05))
+sct.iqr.signif  <- quantile(sct.iqr, probs = c(.01)) %>%
+                   names() %>%
+                   str_remove('\\%$') %>%
+                   {as.numeric(.) / 100} %>%
+                   round(digits = 3) %>%
+                   {str_remove(as.character(.), '^0{1}')}
+
+### produce random assignment graphs for age variable
+# build mean plot
+ggplot() +
+  geom_histogram(aes(x = age.mean),
+    bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
+  scale_x_continuous(breaks = seq(15, 75, 5)) +
+  scale_y_continuous(breaks = seq(0, 80, 10)) +
+  geom_col(aes(x = empirical.age.mean, y = 85), color = 'black') +
   geom_segment(
-    aes(x = iqr95CI[1], xend = iqr95CI[1], y = -5, yend = 105), size = 1) +
+    aes(x = age.ci[1], xend = age.ci[1], y = -5, yend = 85), size = 1) +
   geom_segment(
-    aes(x = iqr95CI[2], xend = iqr95CI[2], y = -5, yend = 105), size = 1) +
-  labs(y = 'Density', x = 'Interquartile Range (Candidate Age)') +
+    aes(x = age.ci[2], xend = age.ci[2], y = -5, yend = 85), size = 1) +
+  labs(y = 'Density', x = 'Simulated Mean of Candidate Age') +
   theme_bw() +
   theme(axis.title = element_text(size = 10),
         axis.title.y = element_text(margin = margin(r = 12)),
@@ -308,22 +346,51 @@ ggplot(randomAssignment, aes(x = simulated.iqr)) +
         panel.grid.minor.x = element_blank(),
         panel.grid.major.y = element_line(color = 'grey79')
   )
+
+# save plot
+ggsave('age-mean.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+       width = 7, height = 5)
+
+# build mean plot
+ggplot() +
+  geom_histogram(aes(x = age.iqr),
+    bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
+  scale_x_continuous(breaks = seq(5, 15, .5)) +
+  scale_y_continuous(breaks = seq(0, 135, 15)) +
+  geom_col(aes(x = empirical.age.iqr, y = 129), color = 'black', width = .07) +
+  geom_text(aes(y = 129, x = empirical.age.iqr),
+    label = paste0('p-value = ', age.iqr.signif) ,
+        family = 'LM Roman 10', position = position_udge(x = .25, y = 3)) +
+      labs(y = 'Density', x = 'Simulated Interquartie Range of Candidate Age') +
+      theme_bw() +      theme(axis.title = element_text(size = 10),
+            axis.ttle.y = element_text(margin = margin(r = 12)),
+        axis.titlex = element_text(margin = margin(t = 12)),
+        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        text = element_text(family = 'LM Roman 10'),
+        sct.panerderif = element_rect(color = 'black', size = 1),
+                  panel.grid.major  .x = element_blank(),
+                  panel.grid.minor.x = element_blank(),
+                  panel.grid.major.y = element_line(color = 'grey79')
+                  )
 
 # save plot
 ggsave('iqr-age.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
        width = 7, height = 5)
 
+### produce random outcome graphs for sct.favorable variable
 # build mean plot
-ggplot(randomAssignment, aes(x = simulated.mean)) +
-  geom_histogram(bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
-  scale_x_continuous(breaks = seq(30, 55, 2.5)) +
-  scale_y_continuous(breaks = seq(0, 105, 15)) +
-  geom_col(aes(x = empiricalMean, y = .1), color = 'black') +
+ggplot() +
+  geom_histogram(aes(x = sct.mean),
+    bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
+  scale_x_continuous(breaks = seq(0, 1, .1)) +
+  scale_y_continuous(breaks = seq(0, 55, 5)) +
+  geom_col(aes(x = empirical.sct.mean, y = 55), color = 'black') +
   geom_segment(
-    aes(x = mean95CI[1], xend = mean95CI[1], y = -5, yend = 105), size = 1) +
+    aes(x = sct.ci[1], xend = sct.ci[1], y = -5, yend = 85), size = 1) +
   geom_segment(
-    aes(x = mean95CI[2], xend = mean95CI[2], y = -5, yend = 105), size = 1) +
-  labs(y = 'Density', x = 'Mean (Candidate Age)') +
+    aes(x = sct.ci[2], xend = sct.ci[2], y = -5, yend = 85), size = 1) +
+  labs(y = 'Density', x = 'Simulated Mean of Candidate Age') +
   theme_bw() +
   theme(axis.title = element_text(size = 10),
         axis.title.y = element_text(margin = margin(r = 12)),
@@ -338,39 +405,5 @@ ggplot(randomAssignment, aes(x = simulated.mean)) +
   )
 
 # save plot
-ggsave('mean-age.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
-       width = 7, height = 5)
-
-### produce random outcomes graph
-# extract moment distributions from datasets
-outcome.mean  <- unlist(randomAssignment$outcome.mean)
-empiricalMean <- mean(tjspAnalysis$sct.favorable)
-mean95CI      <- quantile(outcome.mean, probs = c(.05, .95))
-
-# build mean plot
-ggplot(randomAssignment, aes(x = outcome.mean)) +
-  geom_histogram(bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
-  scale_x_continuous(breaks = seq(.5, .7, .01)) +
-  scale_y_continuous(breaks = seq(0, 120, 15)) +
-  # geom_col(aes(x = empiricalMean, y = .1), color = 'black') +
-  geom_segment(
-    aes(x = mean95CI[1], xend = mean95CI[1], y = -5, yend = 105), size = 1) +
-  geom_segment(
-    aes(x = mean95CI[2], xend = mean95CI[2], y = -5, yend = 105), size = 1) +
-  labs(y = 'Density', x = 'Mean (Candidate Age)') +
-  theme_bw() +
-  theme(axis.title = element_text(size = 10),
-        axis.title.y = element_text(margin = margin(r = 12)),
-        axis.title.x = element_text(margin = margin(t = 12)),
-        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        text = element_text(family = 'LM Roman 10'),
-        panel.border = element_rect(color = 'black', size = 1),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(color = 'grey79')
-  )
-
-# save plot
-ggsave('mean-outcome.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+ggsave('age-mean.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
        width = 7, height = 5)
