@@ -336,7 +336,6 @@ ggplot() +
     bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
   scale_x_continuous(breaks = seq(15, 75, 5)) +
   scale_y_continuous(breaks = seq(0, 80, 10)) +
-  geom_col(aes(x = age.empirical.mean, y = 85), color = 'black') +
   geom_segment(
     aes(x = age.ci[1], xend = age.ci[1], y = -3, yend = 85), size = 1) +
   geom_segment(
@@ -355,32 +354,35 @@ ggplot() +
         panel.grid.major.y = element_line(color = 'grey79')
   )
 
-# save plot
-ggsave('age-mean.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
-       width = 7, height = 5)
+# # save plot
+# ggsave('age-mean.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+#        width = 7, height = 5)
 
 # build iqr plot
 ggplot() +
-  geom_histogram(aes(x = age.simulation.iqr),
-    bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
+  geom_histogram(aes(x = age.simulation.iqr, fill = 'grey79'),
+    bins = 25, alpha = .5, color = 'black') +
   scale_x_continuous(breaks = seq(5, 15, .5)) +
   scale_y_continuous(breaks = seq(0, 135, 15)) +
-  geom_col(aes(x = age.empirical.iqr, y = 129), color = 'black', width = .07) +
-  geom_text(aes(y = 129, x = age.empirical.iqr),
-    label = paste0('p-value = ', age.iqr.signif), family = 'LM Roman 10',
-    position = position_nudge(x = .25, y = 3)) +
-  labs(y = 'Density', x = 'Simulated Interquartile Range of Candidate Age') +
+  geom_col(aes(x = age.empirical.iqr, y = 129, fill = 'grey25'), color = 'black',
+    width = .05) +
+  geom_text(aes(y = 129, x = age.empirical.iqr), label = 'p-value > .05',
+    family = 'LM Roman 10', position = position_nudge(x = .35, y = .65)) +
+  scale_fill_manual(name = element_blank(), values = c('grey25', 'grey79'),
+    labels = c('Empirical IQR', 'Simulated IQR')) +
+  labs(y = 'Density', x = 'Simulated IQR') +
   theme_bw() +
   theme(axis.title = element_text(size = 10),
         axis.title.y = element_text(margin = margin(r = 12)),
-        axis.title.x = element_text(margin = margin(t = 12)),
+        axis.title.x = element_blank(),
         axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
         axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
         text = element_text(family = 'LM Roman 10'),
         panel.border = element_rect(color = 'black', size = 1),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(color = 'grey79')
+        panel.grid.major.y = element_line(color = 'grey79'),
+        legend.position = 'bottom'
   )
 
 # save plot
@@ -394,12 +396,11 @@ ggplot() +
     bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
   scale_x_continuous(breaks = seq(0, 1, .1)) +
   scale_y_continuous(breaks = seq(0, 55, 5)) +
-  geom_col(aes(x = sct.empirical.mean, y = 55), color = 'black', width = .03) +
   geom_segment(
     aes(x = sct.ci[1], xend = sct.ci[1], y = -1, yend = 55), size = 1) +
   geom_segment(
     aes(x = sct.ci[2], xend = sct.ci[2], y = -1, yend = 55), size = 1) +
-  labs(y = 'Density', x = 'Simulated Mean of SCT Favorable Outcome') +
+  labs(y = 'Density', x = 'Simulated Mean of Favorable Outcome') +
   theme_bw() +
   theme(axis.title = element_text(size = 10),
         axis.title.y = element_text(margin = margin(r = 12)),
@@ -413,33 +414,35 @@ ggplot() +
         panel.grid.major.y = element_line(color = 'grey79')
   )
 
-# save plot
-ggsave('sct-mean.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
-       width = 7, height = 5)
+# # save plot
+# ggsave('sct-mean.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+#        width = 7, height = 5)
 
 # build iqr plot
 ggplot() +
-  geom_histogram(aes(x = sct.simulation.iqr),
-    bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
+  geom_histogram(aes(x = sct.simulation.iqr, fill = 'grey79'),
+    bins = 25, alpha = .5, color = 'black') +
   scale_x_continuous(breaks = seq(0, 1, .05)) +
   scale_y_continuous(breaks = seq(0, 120, 15)) +
-  geom_col(aes(x = sct.empirical.iqr, y = 120), color = 'black', width = .005) +
-  geom_text(aes(y = 120, x = sct.empirical.iqr),
-    label = paste0('p-value < ', sct.iqr.signif), family = 'LM Roman 10',
-    position = position_nudge(x = .01, y = 3)) +
-  labs(x = 'Simulated Interquartile Range of SCT Favorable Outcome',
-       y = 'Density') +
+  geom_col(aes(x = sct.empirical.iqr, y = 120, fill = 'grey25'),
+    color = 'black', width = .007) +
+  geom_text(aes(y = 120, x = sct.empirical.iqr), label = 'p-value < .01',
+    family = 'LM Roman 10', position = position_nudge(x = .035, y = 4)) +
+  scale_fill_manual(name = element_blank(), values = c('grey25', 'grey79'),
+    labels = c('Empirical IQR', 'Simulated IQR')) +
+  labs(y = 'Density', x = 'Simulated IQR') +
   theme_bw() +
   theme(axis.title = element_text(size = 10),
         axis.title.y = element_text(margin = margin(r = 12)),
-        axis.title.x = element_text(margin = margin(t = 12)),
+        axis.title.x = element_blank(),
         axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
         axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
         text = element_text(family = 'LM Roman 10'),
         panel.border = element_rect(color = 'black', size = 1),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(color = 'grey79')
+        panel.grid.major.y = element_line(color = 'grey79'),
+        legend.position = 'bottom'
   )
 
 # save plot
