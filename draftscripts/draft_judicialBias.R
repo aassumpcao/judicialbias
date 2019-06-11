@@ -1535,3 +1535,33 @@ ggplot() +
 
 # remove everything for serial sourcing
 rm(list = ls())
+
+
+### regression discontinuity analysis
+# create vector of election dates
+electionDate <- c('2004-10-03', '2008-10-05', '2012-10-07', '2016-10-02')
+
+# create election dates variable, which assigns treatment to observations
+tjspAnalysis$rd.assign <- tjspAnalysis %>%
+  {case_when(.$election.year == 2008 ~ electionDate[2],
+             .$election.year == 2012 ~ electionDate[3],
+             .$election.year == 2016 ~ electionDate[4],
+  )} %>%
+  as.Date(format = '%Y-%m-%d')
+
+# create variable distance to cutoff
+tjspAnalysis$rd.distance <- tjspAnalysis %>% {.$case.lastupdate - .$rd.assign}
+
+# baseline regression
+library(rdrobust)
+
+# not significant
+tjspAnalysis %$%
+ rdrobust(y = sct.favorable, x = rd.distance, p = 1, q = 2, level = 95,
+          h = 100) %>%
+ summary()
+
+# not significant
+lm(sct.favorable ~ rd.distance + candidate.elected + rd.distance * candidate.elected,
+   data = tjspAnalysis) %>%
+summary()

@@ -448,3 +448,29 @@ ggplot() +
 # save plot
 ggsave('sct-iqr.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
        width = 7, height = 5)
+
+### regression discontinuity analysis
+# create vector of election dates
+electionDate <- c('2004-10-03', '2008-10-05', '2012-10-07', '2016-10-02')
+
+# create election dates variable, which assigns treatment to observations
+tjspAnalysis$rd.assign <- tjspAnalysis %>%
+  {case_when(.$election.year == 2008 ~ electionDate[2],
+             .$election.year == 2012 ~ electionDate[3],
+             .$election.year == 2016 ~ electionDate[4]
+  )} %>%
+  as.Date(format = '%Y-%m-%d')
+
+# split dataset to elected-candidates only and create running var
+tjspElected <- tjspAnalysis %>%
+  filter(case.assignment < rd.assign & rd.assign < case.lastupdate)
+
+# not significant
+tjspElected %>%
+  {lm(sct.favorable ~ candidate.elected, data = .)} %>%
+  summary()
+
+# not significant
+lm(sct.favorable ~ rd.distance,
+   data = tjspAnalysis) %>%
+summary()
