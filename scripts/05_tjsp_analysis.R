@@ -23,21 +23,21 @@ load('data/tjspSimulation2.Rda')
 
 ### function definitions
 # (blank)
-
+tjspAnalysis %>% names()
 ### define variable labels
 # outcome label
 outcomeLabel <- 'SCT Favorable Outcome'
 
 # create list of covariates
-covariates <- c(10, 6, 11:13, 24, 30:31, 35, 33, 28, 29)
+covariates <- c(10, 6, 11:13, 25, 31:32, 36, 34, 29, 30)
 covarLabel <- c('Case Duration (in days)', 'Amount Claimed (in R$)',
                 'Pay (in R$)', 'Male', 'Tenure (in days)',  'Age', 'Male',
                 'Political Experience', 'Campaign Expenditures (in R$)',
                 'Elected', 'Level of Education', 'Marital Status')
 
 # define variable types for analysis
-integers <- c(6, 9, 11, 19, 24, 30:31, 33, 35)
-factors  <- c(3, 5, 12, 14:16, 25:29, 34, 36, 37)
+integers <- c(6, 9, 11, 19, 25, 31:32, 34, 36)
+factors  <- c(3, 5, 12, 14:16, 26:30, 35, 37, 38)
 
 ### wrangle variables one final time
 # change variable types
@@ -454,7 +454,7 @@ ggsave('sct-iqr.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
 electionDate <- c('2004-10-03', '2008-10-05', '2012-10-07', '2016-10-02')
 
 # create election dates variable, which assigns treatment to observations
-tjspAnalysis$rd.assign <- tjspAnalysis %>%
+tjspAnalysis$rd.date <- tjspAnalysis %>%
   {case_when(.$election.year == 2008 ~ electionDate[2],
              .$election.year == 2012 ~ electionDate[3],
              .$election.year == 2016 ~ electionDate[4]
@@ -463,14 +463,28 @@ tjspAnalysis$rd.assign <- tjspAnalysis %>%
 
 # split dataset to elected-candidates only and create running var
 tjspElected <- tjspAnalysis %>%
-  filter(case.assignment < rd.assign & rd.assign < case.lastupdate)
+  mutate_at(vars(candidate.votes, total.votes, election.votes), as.integer) %>%
+  mutate(election.share = ifelse(
+    office.ID == 11,
+    (candidate.votes / total.votes) - .5,
+    (candidate.votes / total.votes) - (election.votes / total.votes)
+  ))
+
 
 # not significant
-tjspElected %>%
-  {lm(sct.favorable ~ candidate.elected, data = .)} %>%
-  summary()
+c(.50, .45, .40, .30, .25, .20, .15, .10, .05, .01) %>%
+lapply(function(x){
+  filter(tjspElected, office.ID == 11 & case.lastupdate > rd.date) %$%
+    rdrobust::rdrobust(y = sct.favorable, x = election.share, h = x) %>%
+    {c(.$Estimate[1,1], .$pv[1,1], sum(.$Nh))}
+})
 
 # not significant
-lm(sct.favorable ~ rd.distance,
-   data = tjspAnalysis) %>%
-summary()
+andre <- filter(tjspElected, office.ID == 11 & case.lastupdate > rd.date) %$%
+    rdrobust::rdrobust(y = sct.favorable, x = election.share) %>%
+    summary()
+
+
+andre %>% str()
+andre$Estimate[1,1]
+andre['Nh']

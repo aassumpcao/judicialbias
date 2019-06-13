@@ -1549,8 +1549,16 @@ tjspAnalysis$rd.assign <- tjspAnalysis %>%
   )} %>%
   as.Date(format = '%Y-%m-%d')
 
+# split dataset to elected-candidates only
+tjspAnalysis %>%
+  filter(candidate.elected == 1) %>%
+  mutate(rd.distance = case.lastupdate - rd.assign)
+
 # create variable distance to cutoff
 tjspAnalysis$rd.distance <- tjspAnalysis %>% {.$case.lastupdate - .$rd.assign}
+tjspAnalysis$rd.treatmnt  <- tjspAnalysis %>%
+  {ifelse(.$rd.distance > 0 & .$candidate.elected == 1, 1, 0)}
+
 
 # baseline regression
 library(rdrobust)
@@ -1562,6 +1570,6 @@ tjspAnalysis %$%
  summary()
 
 # not significant
-lm(sct.favorable ~ rd.distance + candidate.elected + rd.distance * candidate.elected,
+lm(sct.favorable ~ rd.distance,
    data = tjspAnalysis) %>%
 summary()

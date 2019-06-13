@@ -49,10 +49,10 @@ clawyer   <- which(stringdist::stringdist(politician, clawyers,   'lv') <= 5)
 dlawyer   <- which(stringdist::stringdist(politician, dlawyers,   'lv') <= 5)
 
 # bind results onto match.object
-match.object[claimant, 'candidate.claimant'] <- 1
-match.object[defendant, 'candidate.defendant'] <- 1
-match.object[clawyer, 'candidate.clawyer'] <- 1
-match.object[dlawyer, 'candidate.dlawyer'] <- 1
+match.object[claimant, 'candidate.claimant']  <- 1
+match.object[defendant,'candidate.defendant'] <- 1
+match.object[clawyer,  'candidate.clawyer']   <- 1
+match.object[dlawyer,  'candidate.dlawyer']   <- 1
 
 # create variable capturing litigant type
 match.object %<>%

@@ -2,7 +2,7 @@
 # this script prepares all data for analysis
 # author: andre assumpcao
 # by andre.assumpcao@gmail.com
-rm(list=ls())
+
 ### import statements
 # import packages
 library(tidyverse)
@@ -63,7 +63,7 @@ tjspJudges$judge.name %<>% str_to_lower()
 tjspAnalysis %<>%
   fuzzyjoin::fuzzy_left_join(tjspJudges, joinkey, match_fun = str_detect) %>%
   mutate(judge.pay = judge.pay %>% {ifelse(is.na(.), '35023.25', .)}) %>%
-  mutate_at(vars(4, 15, 55), ~as.Date(., '%d/%m/%Y')) %>%
+  mutate_at(vars(4, 15, 56), ~as.Date(., '%d/%m/%Y')) %>%
   mutate(t = as.numeric(updates - judge.tenure.start)) %>%
   mutate(c = as.numeric(updates - assignment)) %>%
   mutate(judge.tenure  = t %>% {ifelse(. < 1, median(., na.rm = TRUE), .)}) %>%
@@ -76,7 +76,7 @@ names %<>% {ifelse(str_detect(., 'carlos'), 'Male', 'Female')}
 names[is.na(names)] <- 'Male'
 tjspAnalysis[is.na(tjspAnalysis$judge.gender), 'judge.gender'] <- names
 
-# anonymize judges
+# anonymize judge names
 tjspAnalysis %<>% {mutate(., judge = group_indices(., judge))}
 
 # match circuit and municipal information
@@ -88,24 +88,25 @@ tjspAnalysis$tjsp.ID <- unlist(tjspMun[rows, 'tj'])
 tjspAnalysis$ibge.ID <- unlist(tjspMun[rows, 'ibge'])
 
 # create list of useless variables
-vars <- c(8:13, 16, 17, 21, 26:28, 30, 33, 35, 37, 40, 46:47, 50, 51, 53, 55)
+vars <- c(8:13, 16, 17, 21, 26:28, 30, 33, 35, 37, 40, 46:47, 50, 51, 54, 56)
 
 # drop useless vars
 tjspAnalysis %<>% select(-vars)
 varNames <- names(tjspAnalysis)
 
 # rename remaining vars
-varNames[1:7] <- c(paste0('case.', varNames[1:6]), 'case.ID')
-varNames[8] <- 'candidate.litigant.type'
+varNames[1:7]  <- c(paste0('case.', varNames[1:6]), 'case.ID')
+varNames[8]    <- 'candidate.litigant.type'
 varNames[9:10] <- c('case.lastupdate', 'case.claimant.win')
-varNames[31]  <- 'candidate.expenditure'
+varNames[32]   <- 'candidate.expenditure'
 names(tjspAnalysis) <- varNames
 
 # reorder variables
 tjspAnalysis %<>%
   select(
     matches('^case'), matches('^judge'), tjsp.ID, ibge.ID, election.ID,
-    matches('^elect'), matches('^off'), matches('^candida'), matches('^par')
+    matches('^elect|^tot'), matches('^off'), matches('^candida'),
+    matches('^par')
   )
 
 # save to file

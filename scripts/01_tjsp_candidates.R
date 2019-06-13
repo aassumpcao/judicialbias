@@ -65,10 +65,10 @@ tseCandidates <- candidatesSP %>%
   mutate(candidate.votes = ifelse(is.na(votes.x), votes.y, votes.x)) %>%
   select(-votes.x, -CODIGO_CARGO, -votes.y)
 
-
 # edit vacancies dataset before joining onto sections
 vacancies %<>%
-  mutate(election.ID = ifelse(ANO_ELEICAO == 2016, str_pad(SG_UE, 5, pad = '0'),
+  mutate(
+    election.ID = ifelse(ANO_ELEICAO == 2016, str_pad(SG_UE, 5, pad = '0'),
     SIGLA_UE), office.ID = ifelse(ANO_ELEICAO == 2016, CD_CARGO, CODIGO_CARGO),
     office.vacancies = ifelse(ANO_ELEICAO == 2016, QT_VAGAS, QTDE_VAGAS),
     election.year = ANO_ELEICAO
@@ -87,13 +87,13 @@ tseCandidates %<>%
   filter(n() == 1) %>%
   ungroup() %>%
   mutate_at(vars(election.votes, office.vacancies), as.integer) %>%
-  mutate(
+  mutate(total.votes = election.votes,
     election.votes = case_when(office.ID == 11 ~ floor(election.votes / 2),
     office.ID == 13 ~ floor(election.votes / office.vacancies))
   ) %>%
   mutate(candidate.elected = ifelse(candidate.votes >= election.votes, 1, 0))%>%
   select(
-    matches('^elect'), matches('^off'), matches('^candidate'),
+    matches('^elect|^tot'), matches('^off'), matches('^candidate'),
     matches('^candidacy'), everything(), -rank
   ) %>%
   mutate_all(as.character)
