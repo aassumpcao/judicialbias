@@ -23,7 +23,7 @@ load('data/tjspSimulation2.Rda')
 
 ### function definitions
 # (blank)
-tjspAnalysis %>% names()
+
 ### define variable labels
 # outcome label
 outcomeLabel <- 'SCT Favorable Outcome'
@@ -385,9 +385,9 @@ ggplot() +
         legend.position = 'bottom'
   )
 
-# save plot
-ggsave('age-iqr.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
-       width = 7, height = 5)
+# # save plot
+# ggsave('age-iqr.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+#        width = 7, height = 5)
 
 ### produce random outcome graphs for sct.favorable variable
 # build mean plot
@@ -470,21 +470,46 @@ tjspElected <- tjspAnalysis %>%
     (candidate.votes / total.votes) - (election.votes / total.votes)
   ))
 
+# different bandwidths for which we want to test everything
+bws <- c(.40, .35, .30, .25, .20, .15, .10, .0842, .05, .01)
 
-# not significant
-c(.50, .45, .40, .30, .25, .20, .15, .10, .05, .01) %>%
-lapply(function(x){
-  filter(tjspElected, office.ID == 11 & case.lastupdate > rd.date) %$%
-    rdrobust::rdrobust(y = sct.favorable, x = election.share, h = x) %>%
-    {c(.$Estimate[1,1], .$pv[1,1], sum(.$Nh))}
-})
+# run rd regressions for different bandwidths
+rdEstimates <- bws %>%
+  lapply(function(x){
+    filter(tjspElected, office.ID == 11 & case.lastupdate > rd.date) %$%
+      rdrobust::rdrobust(y = sct.favorable, x = election.share, h = x) %>%
+      {c(estimate = unname(.$Estimate[1, 1]), pvalue = .$pv[1, 1],
+         n = sum(.$Nh), .$ci[1,], bws = .$bws[1,1]
+      )}
+  })
 
-# not significant
-andre <- filter(tjspElected, office.ID == 11 & case.lastupdate > rd.date) %$%
-    rdrobust::rdrobust(y = sct.favorable, x = election.share) %>%
-    summary()
+# bind into different datasets
+rdResults <- tibble()
+rdResults <- lapply(rdEstimates, bind_rows, rdResults) %>%
+             {bind_rows(rdResults, .)}
+
+# build point estimate graphs
+ggplot(data = rdResults) +
+  geom_point(aes(y = estimate, x = bws)) +
+  geom_errorbar(aes(ymax = `CI Upper`, ymin = `CI Lower`, x = bws)) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'gray33') +
+  scale_y_continuous(breaks = seq(-.25, .75, .125)) +
+  scale_x_discrete(breaks = seq(1:11) %>% length(), labels = as.character(rdResults$bws))
 
 
-andre %>% str()
-andre$Estimate[1,1]
-andre['Nh']
+
+
+  labs(y = 'Point Estimate', x = element_blank()) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 10),
+        axis.title.y = element_text(margin = margin(r = 12)),
+        axis.title.x = element_blank(),
+        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        text = element_text(family = 'LM Roman 10'),
+        panel.border = element_rect(color = 'black', size = 1),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        legend.position = 'bottom'
+  )
