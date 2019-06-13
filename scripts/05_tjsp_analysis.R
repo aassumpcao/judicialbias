@@ -64,7 +64,7 @@ tjspAnalysis[is.na(tjspAnalysis$judge.tenure), 'judge.tenure'] <- missing.tenure
 tjspAnalysis %<>%
   mutate(sct.favorable = case_when(
     case.claimant.win == 1 & str_detect(candidate.litigant.type,'Claimant') ~ 1,
-    case.claimant.win == 0 & str_detect(candidate.litigant.type,'Defendant')~ 1,
+    case.claimant.win == 0 & str_detect(candidate.litigant.type,'Defendant')~ 1
   )) %>%
   replace_na(list(sct.favorable = 0))
 
@@ -445,9 +445,9 @@ ggplot() +
         legend.position = 'bottom'
   )
 
-# save plot
-ggsave('sct-iqr.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
-       width = 7, height = 5)
+# # save plot
+# ggsave('sct-iqr.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+#        width = 7, height = 5)
 
 ### regression discontinuity analysis
 # create vector of election dates
@@ -490,15 +490,21 @@ rdResults <- lapply(rdEstimates, bind_rows, rdResults) %>%
 
 # build point estimate graphs
 ggplot(data = rdResults) +
-  geom_point(aes(y = estimate, x = bws)) +
-  geom_errorbar(aes(ymax = `CI Upper`, ymin = `CI Lower`, x = bws)) +
+  geom_point(aes(y = estimate, x = 1:10)) +
+  geom_point(aes(y = unlist(rdResults[8,1]), x = 8), color = 'dodgerblue2') +
+  geom_errorbar(
+    aes(ymax = `CI Upper`, ymin = `CI Lower`, x = 1:10),
+    width = .5
+  ) +
+  geom_errorbar(
+    aes(ymax = unlist(rdResults[8,4]), ymin = unlist(rdResults[8,5]), x = 8),
+    width = .5, color = 'dodgerblue2'
+  ) +
   geom_hline(yintercept = 0, linetype = 'dashed', color = 'gray33') +
   scale_y_continuous(breaks = seq(-.25, .75, .125)) +
-  scale_x_discrete(breaks = seq(1:11) %>% length(), labels = as.character(rdResults$bws))
-
-
-
-
+  scale_x_continuous(breaks = 1:10, labels = round(rdResults$bws, digits = 2)%>%
+    format(nsmall = 2) %>% paste0(' \n (n = ', rdResults$n, ')')
+  ) +
   labs(y = 'Point Estimate', x = element_blank()) +
   theme_bw() +
   theme(axis.title = element_text(size = 10),
@@ -513,3 +519,7 @@ ggplot(data = rdResults) +
         panel.grid.major.y = element_blank(),
         legend.position = 'bottom'
   )
+
+# # save plot
+ggsave('rd-bws.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+       width = 7, height = 5)
