@@ -14,7 +14,7 @@ tjspElected <- tjspAnalysis %>%
   ))
 
 # prepare data to regression models
-tjsp_data <- tjspElected %>% 
+tjsp_data <- tjspElected %>%
   mutate(sct.favorable = case_when(
     case.claimant.win == 1 & str_detect(candidate.litigant.type, 'Claimant') ~ 1,
     case.claimant.win == 0 & str_detect(candidate.litigant.type, 'Defendant') ~ 1,
@@ -26,24 +26,24 @@ tjsp_data <- tjspElected %>%
     # case.claim = cut(case.claim, c(0, 1000, 5000, 10000, 20000, 40000, Inf)),
     # judge.pay = cut(as.numeric(judge.pay), c(0, 10000, 30000, 50000, Inf)),
     judge.pay = as.numeric(judge.pay),
-    # judge.tenure = cut(as.numeric(judge.tenure), c(0, 5000, 10000, Inf)), 
+    # judge.tenure = cut(as.numeric(judge.tenure), c(0, 5000, 10000, Inf)),
     judge.tenure = as.numeric(judge.tenure),
-    case.claim, 
+    case.claim,
     election.year,
     election.share,
-    judge.pay, 
-    judge.gender, 
-    judge.tenure, 
-    election.year, 
-    election.year, 
+    judge.pay,
+    judge.gender,
+    judge.tenure,
+    election.year,
+    election.year,
     office.ID,
-    candidate.litigant.type, 
+    candidate.litigant.type,
     # candidate.age = cut(as.numeric(candidate.age), c(0, 30, 50, 60, 80, Inf)),
     candidate.age = as.numeric(candidate.age),
     candidate.gender,
     # candidate.gender.same.judge = as.factor(as.numeric(candidate.gender == judge.gender)),
-    candidate.education, 
-    candidate.maritalstatus, 
+    candidate.education,
+    candidate.maritalstatus,
     candidate.experience,
     candidate.litigant.type,
     # candidate.votes = cut(as.numeric(candidate.votes), c(0, 1000, 10000, 100000, Inf)),
@@ -51,8 +51,8 @@ tjsp_data <- tjspElected %>%
     candidate.elected,
     candidacy.situation,
     party.number = fct_lump(party.number, 10)
-  ) %>% 
-  filter_all(all_vars(!is.na(.))) %>% 
+  ) %>%
+  filter_all(all_vars(!is.na(.))) %>%
   mutate_if(is.character, as.factor)
 
 # seed
@@ -64,10 +64,10 @@ tjsp_train <- tjsp_data[id_train, ]
 tjsp_test <- tjsp_data[-id_train, ]
 
 # recipe to prepare data
-rec_obj <- recipe(sct.favorable ~ ., data = tjsp_train) %>% 
-  step_dummy(all_predictors(), -all_numeric()) %>% 
+rec_obj <- recipe(sct.favorable ~ ., data = tjsp_train) %>%
+  step_dummy(all_predictors(), -all_numeric()) %>%
   step_center(all_predictors()) %>%
-  step_scale(all_predictors()) 
+  step_scale(all_predictors())
 
 trained_rec <- prep(rec_obj, training = tjsp_train)
 
@@ -77,7 +77,7 @@ test_data  <- bake(trained_rec, new_data = tjsp_test)
 
 # model 1: random forest
 rf_model <- randomForest::randomForest(
-  sct.favorable ~ ., 
+  sct.favorable ~ .,
   ntree = 1000, mtry = 10,
   data = train_data
 )
@@ -93,25 +93,25 @@ caret_rf_model <- caret::train(
 
 # model 3: logistic lasso
 caret_glm_model <- caret::train(
-  sct.favorable ~ ., 
-  method = "glmnet", 
+  sct.favorable ~ .,
+  method = "glmnet",
   data = train_data
 )
 
-# check how to print siginificant variables
+# check how to print significant variables
 summary(caret_glm_model)
 
 # model 4: gradient boosting
 # caret_h2o_model <- caret::train(
-#   sct.favorable ~ ., 
-#   method = "gbm_h2o", 
+#   sct.favorable ~ .,
+#   method = "gbm_h2o",
 #   data = train_data
 # )
 
 # model 5: extreme gradient boosting
 caret_xgb_model <- caret::train(
-  sct.favorable ~ ., 
-  method = "xgbTree", 
+  sct.favorable ~ .,
+  method = "xgbTree",
   data = train_data
 )
 
