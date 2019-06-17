@@ -60,7 +60,7 @@ tjspAnalysis %<>%
 missing.tenure <- median(as.numeric(tjspAnalysis$judge.tenure), na.rm = TRUE)
 tjspAnalysis[is.na(tjspAnalysis$judge.tenure), 'judge.tenure'] <- missing.tenure
 
-# create outcome variable for case ruling
+# create outcome variable for case
 tjspAnalysis %<>%
   mutate(sct.favorable = case_when(
     case.claimant.win == 1 & str_detect(candidate.litigant.type,'Claimant') ~ 1,
@@ -520,6 +520,6 @@ ggplot(data = rdResults) +
         legend.position = 'bottom'
   )
 
-# # save plot
+# save plot
 ggsave('rd-bws.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
-       width = 7, height = 5)
+       width = 8, height = 5)

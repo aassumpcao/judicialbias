@@ -1,3 +1,9 @@
+### judicial favoritism of politicians
+# this script produces outcome predictions
+# author: andre assumpcao
+# email:  andre.assumpcao@gmail.com
+
+# import statements
 library(tidyverse)
 library(recipes)
 
@@ -5,24 +11,27 @@ library(recipes)
 load('data/tjspFinal.Rda')
 
 # split dataset to elected-candidates only and create running var
-tjspElected <- tjspAnalysis %>%
+tjsp_data <- tjspAnalysis %>%
   mutate_at(vars(candidate.votes, total.votes, election.votes), as.integer) %>%
-  mutate(election.share = ifelse(
-    office.ID == 11,
-    (candidate.votes / total.votes) - .5,
-    (candidate.votes / total.votes) - (election.votes / total.votes)
-  ))
+  mutate(
+    election.share = ifelse(
+      office.ID == 11,
+      (candidate.votes / total.votes) - .5,
+      (candidate.votes / total.votes) - (election.votes / total.votes)
+    ),
+    sct.favorable = case_when(
+      case.claimant.win == 1 & str_detect(candidate.litigant.type, 'Claimant') ~ 1,
+      case.claimant.win == 0 & str_detect(candidate.litigant.type, 'Defendant') ~ 1,
+      TRUE ~ 0
+    )
+  )
 
 # prepare data to regression models
-tjsp_data <- tjspElected %>%
-  mutate(sct.favorable = case_when(
-    case.claimant.win == 1 & str_detect(candidate.litigant.type, 'Claimant') ~ 1,
-    case.claimant.win == 0 & str_detect(candidate.litigant.type, 'Defendant') ~ 1,
-    TRUE ~ 0
-  )) %>%
+tjsp_data %<>%
   transmute(
-    sct.favorable = factor(sct.favorable),
-    case.claim = parse_number(case.claim, locale = locale(grouping_mark = ".", decimal_mark = ",")),
+    sct.favorable = sct.favorable,
+    case.claim = parse_number(case.claim, locale = locale(grouping_mark = '.',
+                                                          decimal_mark = ',')),
     # case.claim = cut(case.claim, c(0, 1000, 5000, 10000, 20000, 40000, Inf)),
     # judge.pay = cut(as.numeric(judge.pay), c(0, 10000, 30000, 50000, Inf)),
     judge.pay = as.numeric(judge.pay),
@@ -59,19 +68,20 @@ tjsp_data <- tjspElected %>%
 set.seed(19910401)
 
 # separate train and test data
-id_train <- sample(seq_len(nrow(tjsp_data)), 4200)
+id_train   <- sample(seq_len(nrow(tjsp_data)), 4200)
 tjsp_train <- tjsp_data[id_train, ]
-tjsp_test <- tjsp_data[-id_train, ]
+tjsp_test  <- tjsp_data[-id_train, ]
 
-# recipe to prepare data
+# create recipe preparing data for analysis
 rec_obj <- recipe(sct.favorable ~ ., data = tjsp_train) %>%
   step_dummy(all_predictors(), -all_numeric()) %>%
   step_center(all_predictors()) %>%
   step_scale(all_predictors())
 
+# store predictors and outcomes for future estimation
 trained_rec <- prep(rec_obj, training = tjsp_train)
 
-# prepare data
+# prepare data for analysis
 train_data <- bake(trained_rec, new_data = tjsp_train)
 test_data  <- bake(trained_rec, new_data = tjsp_test)
 
@@ -82,19 +92,23 @@ rf_model <- randomForest::randomForest(
   data = train_data
 )
 
-summary(glm(sct.favorable ~ ., data = train_data, family = "binomial"))
+# run logit model
+summary(
+  lm(sct.favorable ~ ., data = filter(tjsp_data,
+                                      !(candidate.litigant.type %in%
+                                        c('Claimant', 'Claimant Lawyer')))))
 
 # model 2: random forest with tuning (~20 min)
 caret_rf_model <- caret::train(
   sct.favorable ~ .,
-  method = "rf",
+  method = 'rf',
   data = train_data
 )
 
 # model 3: logistic lasso
 caret_glm_model <- caret::train(
   sct.favorable ~ .,
-  method = "glmnet",
+  method = 'glmnet',
   data = train_data
 )
 
@@ -104,14 +118,14 @@ summary(caret_glm_model)
 # model 4: gradient boosting
 # caret_h2o_model <- caret::train(
 #   sct.favorable ~ .,
-#   method = "gbm_h2o",
+#   method = 'gbm_h2o',
 #   data = train_data
 # )
 
 # model 5: extreme gradient boosting
 caret_xgb_model <- caret::train(
   sct.favorable ~ .,
-  method = "xgbTree",
+  method = 'xgbTree',
   data = train_data
 )
 
@@ -135,14 +149,14 @@ randomForest::varImpPlot(rf_model)
 library(iml)
 X <- dplyr::select(test_data, -sct.favorable)
 predictor <- Predictor$new(rf_model, data = X, y = as.numeric(test_data$sct.favorable))
-# imp <- FeatureImp$new(predictor, loss = "mae")
+# imp <- FeatureImp$new(predictor, loss = 'mae')
 # plot(imp)
 
-ale = FeatureEffect$new(predictor, feature = "case.claim")
+ale = FeatureEffect$new(predictor, feature = 'case.claim')
 ale$plot()
-ale = FeatureEffect$new(predictor, feature = "judge.tenure")
+ale = FeatureEffect$new(predictor, feature = 'judge.tenure')
 ale$plot()
-ale = FeatureEffect$new(predictor, feature = "judge.pay")
+ale = FeatureEffect$new(predictor, feature = 'judge.pay')
 ale$plot()
-ale = FeatureEffect$new(predictor, feature = "election.share")
+ale = FeatureEffect$new(predictor, feature = 'election.share')
 ale$plot()
