@@ -322,7 +322,7 @@ age.iqr.signif  <- quantile(age.simulation.iqr, probs = c(.0649002)) %>%
 
 # manually try out quantiles for age
 iqr.significant <- quantile(sct.simulation.iqr, probs = c(.05))
-sct.iqr.signif  <- quantile(sct.simulation.iqr, probs = c(.01)) %>%
+sct.iqr.signif  <- quantile(sct.simulation.iqr, probs = c(.0031)) %>%
                    names() %>%
                    str_remove('\\%$') %>%
                    {as.numeric(.) / 100} %>%
