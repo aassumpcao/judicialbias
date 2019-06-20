@@ -8,6 +8,8 @@ output:
 knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
 ```
 
+Nas seções anteriores, verificamos que a distribuição dos processos pode ser considerada aleatória e que 
+
 
 ```{r}
 out <- readr::read_rds("../plots/out.rds")
