@@ -208,7 +208,6 @@ labs <- c("Judge Tenure (days)",
           "Judge Pay (Brazilian Reais)",
           "Election Share")
 
-
 pdp <- map2(vars, labs, ~{
   ale <- FeatureEffect$new(predictor, feature = .x, method = "pdp")
   ale$plot() +
