@@ -65,15 +65,24 @@ tjsp_test <- tjsp_data[-id_train, ]
 
 # recipe to prepare data
 rec_obj <- recipe(sct.favorable ~ ., data = tjsp_train) %>% 
-  step_dummy(all_predictors(), -all_numeric()) %>% 
+  step_dummy(all_predictors(), -all_numeric()) 
+
+# needed to create new recipe for dnn model
+# if we center and scale variables to the RF model, the PDP plots will be 
+# harder to understand
+rec_dnn <- rec_obj %>% 
   step_center(all_predictors()) %>%
   step_scale(all_predictors()) 
 
 trained_rec <- prep(rec_obj, training = tjsp_train)
+trained_rec_dnn <- prep(rec_dnn, training = tjsp_train)
 
 # prepare data
 train_data <- bake(trained_rec, new_data = tjsp_train)
 test_data  <- bake(trained_rec, new_data = tjsp_test)
+train_data_dnn <- bake(trained_rec_dnn, new_data = tjsp_train)
+test_data_dnn  <- bake(trained_rec_dnn, new_data = tjsp_test)
+
 
 # models -----------------------------------------------------------------------
 # model 1: random forest
@@ -111,8 +120,8 @@ dnn_model %>%
 
 dnn_model %>% 
   fit(
-    x = as.matrix(train_data[,-1]), 
-    y = as.numeric(as.character(train_data$sct.favorable)),
+    x = as.matrix(train_data_dnn[,-1]), 
+    y = as.numeric(as.character(train_data_dnn$sct.favorable)),
     epochs = 50, batch_size = 128, validation_split = .1
   )
 
@@ -128,7 +137,7 @@ predictions <- tibble::tibble(
   pred_rf = predict(rf_model, test_data),
   pred_gbm = predict(caret_xgb_model, test_data),
   pred_lasso = predict(caret_glm_model, test_data),
-  pred_dnn = as.factor(predict_classes(dnn_model, as.matrix(test_data[,-1])))
+  pred_dnn = as.factor(predict_classes(dnn_model, as.matrix(test_data_dnn[,-1])))
 ) %>% bind_cols(select(tjsp_test, sct.favorable))
 
 # accuracy / kappa table
@@ -164,8 +173,8 @@ graf_imp <- function(d_graf) {
   d_graf %>% 
     ggplot(aes(x = MeanDecreaseGini, y = rowname)) +
     geom_segment(aes(xend = 0, yend = rowname), size = 1, colour = d_graf$cor[[1]]) +
-    geom_point(size = 4, colour = d_graf$cor[[1]]) +
-    theme_minimal(14) +
+    geom_point(size = 2, colour = d_graf$cor[[1]]) +
+    theme_minimal() +
     labs(x = "Mean decrease Gini", 
          y = "",
          title = "Random Forest Model",
@@ -175,24 +184,61 @@ graf_imp <- function(d_graf) {
 # variable importance plot
 plot_rf <- rf_model %>% 
   list(acc = tab_acc$acc[1]) %>% 
-  d_graf_imp("darkblue") %>% 
-  graf_imp()
+  d_graf_imp("gray20") %>% 
+  graf_imp() +
+  theme(axis.title = element_text(size = 10),
+        axis.title.y = element_text(margin = margin(r = 12)),
+        axis.title.x = element_text(margin = margin(t = 12)),
+        axis.text.y = element_text(size = 10, lineheight = 1.1),
+        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        text = element_text(family = 'LM Roman 10'),
+        # panel.border = element_rect(color = 'black', size = 1),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(color = 'grey79'))
 
 # partial dependency plot (PDP)
 X <- dplyr::select(test_data, -sct.favorable)
 predictor <- Predictor$new(rf_model, data = X, 
                            y = test_data$sct.favorable, 
                            class = 2)
-vars <- c("case.claim", "judge.tenure", "judge.pay", "election.share")
+vars <- c("judge.tenure", "case.claim", "judge.pay", "election.share")
+labs <- c("Judge Tenure (days)",
+          "Case claim (Brazilian Reais)",
+          "Judge Pay (Brazilian Reais)",
+          "Election Share")
 
-pdp <- map(vars, ~{
+
+pdp <- map2(vars, labs, ~{
   ale <- FeatureEffect$new(predictor, feature = .x, method = "pdp")
   ale$plot() + 
-    theme_bw(14) + 
-    ggtitle(.x)
+    scale_y_continuous(limits = c(.65, .83)) +
+    labs(x = .y, y = "Win Probability") + 
+    theme_bw() +
+    theme(axis.title = element_text(size = 10),
+          axis.title.y = element_text(margin = margin(r = 12)),
+          axis.title.x = element_text(margin = margin(t = 12)),
+          axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+          axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+          text = element_text(family = 'LM Roman 10'),
+          panel.border = element_rect(color = 'black', size = 1),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.grid.major.y = element_line(color = 'grey79'))
 })
 
 plot_pdp <- reduce(pdp, `+`)
 
+
 out <- list(tab_latex, plot_rf, plot_pdp)
-readr::write_rds(out, "plots/out.rds")
+readr::write_rds(out, "plots/out.rds", compress = "xz")
+# export -----------------------------------------------------------------------
+
+out <- readr::read_rds("plots/out.rds")
+ggsave("plots/rf-varimp.pdf", out[[2]], device = cairo_pdf, width = 10, height = 6.3)
+ggsave("plots/rf-pdp.pdf", out[[3]], device = cairo_pdf, width = 8, height = 6)
+
+
+
+
+
