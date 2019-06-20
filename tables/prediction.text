@@ -1,0 +1,10 @@
+\documentclass[border = 1pt]{standalone}
+\begin{document}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{-2pt}
+\begin{tabular}{@{\extracolsep{10pt}}lccccc}
+
+\end{tabular}
+\end{document}
+
