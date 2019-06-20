@@ -473,13 +473,17 @@ tjspElected <- tjspAnalysis %>%
 # different bandwidths for which we want to test everything
 bws <- c(.40, .35, .30, .25, .20, .15, .10, .0842, .05, .01)
 
+# create dataset for rd regressions
+rdData <- filter(tjspElected, office.ID == 11 & case.lastupdate > rd.date) %>%
+          mutate(treatment = ifelse(election.share > 0, 1, 0))
+
 # run rd regressions for different bandwidths
 rdEstimates <- bws %>%
   lapply(function(x){
-    filter(tjspElected, office.ID == 11 & case.lastupdate > rd.date) %$%
+    rddata %$%
       rdrobust::rdrobust(y = sct.favorable, x = election.share, h = x) %>%
       {c(estimate = unname(.$Estimate[1, 1]), pvalue = .$pv[1, 1],
-         n = sum(.$Nh), .$ci[1,], bws = .$bws[1,1]
+        n = sum(.$Nh), .$ci[1,], bws = .$bws[1,1]
       )}
   })
 
@@ -493,18 +497,17 @@ ggplot(data = rdResults) +
   geom_point(aes(y = estimate, x = 1:10)) +
   geom_point(aes(y = unlist(rdResults[8,1]), x = 8), color = 'dodgerblue2') +
   geom_errorbar(
-    aes(ymax = `CI Upper`, ymin = `CI Lower`, x = 1:10),
-    width = .5
-  ) +
+    aes(ymax = `CI Upper`, ymin = `CI Lower`, x = 1:10), width = .5) +
   geom_errorbar(
     aes(ymax = unlist(rdResults[8,4]), ymin = unlist(rdResults[8,5]), x = 8),
-    width = .5, color = 'dodgerblue2'
-  ) +
+    width = .5, color = 'dodgerblue2') +
+  geom_text(aes(y = estimate, x = 1:10,
+    label = format(round(estimate, 2), nsmall = 2)), family = 'LM Roman 10',
+    nudge_x = .3) +
   geom_hline(yintercept = 0, linetype = 'dashed', color = 'gray33') +
   scale_y_continuous(breaks = seq(-.25, .75, .125)) +
-  scale_x_continuous(breaks = 1:10, labels = round(rdResults$bws, digits = 2)%>%
-    format(nsmall = 2) %>% paste0(' \n (n = ', rdResults$n, ')')
-  ) +
+  scale_x_continuous(breaks = 1:10, labels = round(rdResults$bws, 2) %>%
+    format(nsmall = 2) %>% paste0(' \n (n = ', rdResults$n, ')')) +
   labs(y = 'Point Estimate', x = element_blank()) +
   theme_bw() +
   theme(axis.title = element_text(size = 10),
@@ -523,3 +526,44 @@ ggplot(data = rdResults) +
 # save plot
 ggsave('rd-bws.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
        width = 8, height = 5)
+
+# build point estimate graphs
+rdData$sct.predicted <- predict(
+  loess(
+    sct.favorable ~ election.share + treatment + election.share^2 +
+    treatment * election.share, data = rdData, family = 'gaussian'
+  )
+)
+
+# create rd plot
+ggplot(data = rdData) +
+  stat_summary_bin(
+    aes(election.share, sct.favorable, color = election.share > 0),
+    geom = 'point', bins = 30) +
+  geom_smooth(aes(election.share, sct.favorable, color = TRUE),
+    linetype = 'dashed', se = FALSE, size = .5) +
+  geom_smooth(aes(election.share, sct.predicted, color = election.share > 0)) +
+  geom_vline(xintercept = 0, linetype = 'longdash') +
+  scale_color_manual(
+    name = 'Politician Condition:', breaks = c('FALSE','TRUE'),
+    values = c('FALSE' = 'grey15', 'TRUE' = 'grey60'),
+    labels = c('Lost Election', 'Won Election')) +
+  labs(y = 'Pro-Politican Ruling', x = 'Vote Share Centered at 50 percent') +
+  lims(y = c(NA, 1), x = c(-.2, .2)) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 10),
+        axis.title.y = element_text(margin = margin(r = 12)),
+        axis.title.x = element_text(margin = margin(t = 12)),
+        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+        text = element_text(family = 'LM Roman 10'),
+        panel.border = element_rect(color = 'black', size = 1),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        legend.position = 'top'
+  )
+
+# save plot
+ggsave('rd-plot.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+       width = 7, height = 5)
