@@ -10,14 +10,19 @@
 #   address below.
 # author: andre assumpcao
 # by: andre.assumpcao@gmail.com
-  
+#     jtrecenti@abj.org.br
+
 # import statements (== packages required to run all scripts in R)
 if (!require(AER))       {install.packages('AER')}
 if (!require(extrafont)) {install.packages('extrafont')}
 if (!require(fuzzyjoin)) {install.packages('fuzzyjoin')}
 if (!require(genderBR))  {install.packages('genderBR')}
+if (!require(iml))       {install.packages('iml')}
+if (!require(keras))     {install.packages('keras')}
 if (!require(lfe))       {install.packages('lfe')}
 if (!require(magrittr))  {install.packages('magrittr')}
+if (!require(patchwork)) {install.packages('patchwork')}
+if (!require(recipes))   {install.packages('recipes')}
 if (!require(sandwich))  {install.packages('sandwich')}
 if (!require(stargazer)) {install.packages('stargazer')}
 if (!require(stopwords)) {install.packages('stopwords')}
