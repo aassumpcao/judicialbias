@@ -1,0 +1,35 @@
+---
+output: 
+  bookdown::pdf_document2:
+    keep_tex: TRUE
+---
+
+```{r}
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+```
+
+
+```{r}
+out <- readr::read_rds("../plots/out.rds")
+```
+
+For the prediction task, we adjusted four different models and checked their accuracy on test data. We used 80% of the sample for training and 20% for testing. The adjusted models were i) Logistic regression with Lasso regularisation (ref), ii) Random Forest (ref), iii) Gradient Boosting and iv) Deep neural networks using dense layers (ref).
+
+Table \@ref(tab:pred-acc) shows accuracy and Kappa (ref) metrics to the ajusted models. The model with greatest performance was the random forest method, with 77% out of sample accuracy. We chose this model to proceed with our analysis.
+
+```{r pred-acc}
+knitr::kable(out[[1]], label = "pred-acc")
+```
+
+Figure \@ref(fig:pred-varimp) shows the variable importance plot for the random forest model, based on mean decrease gini
+
+```{r pred-varimp, fig.width=9, fig.height=7}
+out[[2]]
+```
+
+\@ref(fig:pred-pdp)
+
+```{r pred-pdp, fig.width=8, fig.height=6}
+out[[3]]
+```
+

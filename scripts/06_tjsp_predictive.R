@@ -5,9 +5,17 @@
 
 # import statements
 library(tidyverse)
+library(patchwork)
 library(recipes)
+library(iml)
+library(keras)
 
-# load data
+# seed
+s <- 19910401
+set.seed(s)
+tensorflow::use_session_with_seed(s)
+
+# data -------------------------------------------------------------------------
 load('data/tjspFinal.Rda')
 
 # split dataset to elected-candidates only and create running var
@@ -27,15 +35,17 @@ tjsp_data <- tjspAnalysis %>%
   )
 
 # prepare data to regression models
-tjsp_data %<>%
+loc <- locale(grouping_mark = ".", decimal_mark = ",")
+tjsp_data <- tjspElected %>%
+  mutate(sct.favorable = case_when(
+    case.claimant.win == 1 & str_detect(candidate.litigant.type, 'Claimant') ~ 1,
+    case.claimant.win == 0 & str_detect(candidate.litigant.type, 'Defendant') ~ 1,
+    TRUE ~ 0
+  )) %>%
   transmute(
-    sct.favorable = sct.favorable,
-    case.claim = parse_number(case.claim, locale = locale(grouping_mark = '.',
-                                                          decimal_mark = ',')),
-    # case.claim = cut(case.claim, c(0, 1000, 5000, 10000, 20000, 40000, Inf)),
-    # judge.pay = cut(as.numeric(judge.pay), c(0, 10000, 30000, 50000, Inf)),
+    sct.favorable = factor(sct.favorable),
+    case.claim = parse_number(case.claim, locale = loc),
     judge.pay = as.numeric(judge.pay),
-    # judge.tenure = cut(as.numeric(judge.tenure), c(0, 5000, 10000, Inf)),
     judge.tenure = as.numeric(judge.tenure),
     case.claim,
     election.year,
@@ -47,16 +57,12 @@ tjsp_data %<>%
     election.year,
     office.ID,
     candidate.litigant.type,
-    # candidate.age = cut(as.numeric(candidate.age), c(0, 30, 50, 60, 80, Inf)),
     candidate.age = as.numeric(candidate.age),
     candidate.gender,
-    # candidate.gender.same.judge = as.factor(as.numeric(candidate.gender == judge.gender)),
     candidate.education,
     candidate.maritalstatus,
     candidate.experience,
     candidate.litigant.type,
-    # candidate.votes = cut(as.numeric(candidate.votes), c(0, 1000, 10000, 100000, Inf)),
-    # candidate.votes = as.numeric(candidate.votes),
     candidate.elected,
     candidacy.situation,
     party.number = fct_lump(party.number, 10)
@@ -64,11 +70,9 @@ tjsp_data %<>%
   filter_all(all_vars(!is.na(.))) %>%
   mutate_if(is.character, as.factor)
 
-# seed
-set.seed(19910401)
-
 # separate train and test data
-id_train   <- sample(seq_len(nrow(tjsp_data)), 4200)
+N <- nrow(tjsp_data)
+id_train <- sample(seq_len(N), ceiling(N * .8))
 tjsp_train <- tjsp_data[id_train, ]
 tjsp_test  <- tjsp_data[-id_train, ]
 
@@ -85,6 +89,7 @@ trained_rec <- prep(rec_obj, training = tjsp_train)
 train_data <- bake(trained_rec, new_data = tjsp_train)
 test_data  <- bake(trained_rec, new_data = tjsp_test)
 
+# models -----------------------------------------------------------------------
 # model 1: random forest
 rf_model <- randomForest::randomForest(
   sct.favorable ~ .,
@@ -92,37 +97,40 @@ rf_model <- randomForest::randomForest(
   data = train_data
 )
 
-# run logit model
-summary(
-  lm(sct.favorable ~ ., data = filter(tjsp_data,
-                                      !(candidate.litigant.type %in%
-                                        c('Claimant', 'Claimant Lawyer')))))
-
-# model 2: random forest with tuning (~20 min)
-caret_rf_model <- caret::train(
-  sct.favorable ~ .,
-  method = 'rf',
-  data = train_data
-)
-
-# model 3: logistic lasso
+# model 2: logistic lasso
 caret_glm_model <- caret::train(
   sct.favorable ~ .,
   method = 'glmnet',
   data = train_data
 )
 
-# check how to print significant variables
-summary(caret_glm_model)
+# model 2: deep neural network
+dnn_model <- keras_model_sequential()
+dnn_model <- dnn_model %>%
+  layer_dense(100, input_shape = ncol(train_data) - 1) %>%
+  layer_activation_leaky_relu() %>%
+  layer_dense(100) %>%
+  layer_activation_leaky_relu() %>%
+  layer_dense(50) %>%
+  layer_dropout(.1) %>%
+  layer_activation_leaky_relu() %>%
+  layer_dense(1, activation = "sigmoid")
 
-# model 4: gradient boosting
-# caret_h2o_model <- caret::train(
-#   sct.favorable ~ .,
-#   method = 'gbm_h2o',
-#   data = train_data
-# )
+dnn_model %>%
+  compile(
+    loss = loss_binary_crossentropy,
+    optimizer = optimizer_adam(),
+    metrics = "accuracy"
+  )
 
-# model 5: extreme gradient boosting
+dnn_model %>%
+  fit(
+    x = as.matrix(train_data[,-1]),
+    y = as.numeric(as.character(train_data$sct.favorable)),
+    epochs = 50, batch_size = 128, validation_split = .1
+  )
+
+# model 4: extreme gradient boosting
 caret_xgb_model <- caret::train(
   sct.favorable ~ .,
   method = 'xgbTree',
@@ -130,33 +138,75 @@ caret_xgb_model <- caret::train(
 )
 
 # predictions
-tjsp_test$pred_caret_rf <- predict(caret_rf_model, test_data)
-tjsp_test$pred_caret_lasso <- predict(caret_glm_model, test_data)
-tjsp_test$pred_rf <- predict(rf_model, test_data)
-tjsp_test$pred_xgb <- predict(caret_xgb_model, test_data)
+predictions <- tibble::tibble(
+  pred_rf = predict(rf_model, test_data),
+  pred_gbm = predict(caret_xgb_model, test_data),
+  pred_lasso = predict(caret_glm_model, test_data),
+  pred_dnn = as.factor(predict_classes(dnn_model, as.matrix(test_data[,-1])))
+) %>% bind_cols(select(tjsp_test, sct.favorable))
 
-# accuracy
-tab <- with(tjsp_test, table(sct.favorable, pred_rf))
-sum(diag(tab)) / sum(tab)
-tab <- with(tjsp_test, table(sct.favorable, pred_xgb))
-sum(diag(tab)) / sum(tab)
+# accuracy / kappa table
+tab_acc <- predictions %>%
+  gather(model, pred, -sct.favorable) %>%
+  group_by(model) %>%
+  summarise(accuracy = mean(pred == sct.favorable), acc = accuracy) %>%
+  arrange(desc(accuracy)) %>%
+  mutate(kappa = (accuracy - mean(tjsp_data$sct.favorable == 1)) / mean(tjsp_data$sct.favorable == 1)) %>%
+  mutate_at(vars(accuracy, kappa), scales::percent, .01)
 
-# importance plot
-randomForest::varImpPlot(m$model)
-randomForest::varImpPlot(rf_model)
+# output -----------------------------------------------------------------------
 
+# output for latex
+tab_latex <- tab_acc %>%
+  select(-acc)
 
-library(iml)
+# variable importance plot functions
+d_graf_imp <- function(m_list, cor) {
+  m <- m_list[[1]]
+  acc <- m_list[[2]]
+  d_graf <- m %>%
+    randomForest::importance() %>%
+    as.data.frame() %>%
+    tibble::rownames_to_column() %>%
+    tibble::as_tibble() %>%
+    dplyr::mutate(rowname = stringr::str_extract(rowname, "[^(]+")) %>%
+    dplyr::mutate(rowname = forcats::fct_reorder(rowname, MeanDecreaseGini),
+                  acc = acc, cor = cor)
+  d_graf
+}
+graf_imp <- function(d_graf) {
+  d_graf %>%
+    ggplot(aes(x = MeanDecreaseGini, y = rowname)) +
+    geom_segment(aes(xend = 0, yend = rowname), size = 1, colour = d_graf$cor[[1]]) +
+    geom_point(size = 4, colour = d_graf$cor[[1]]) +
+    theme_minimal(14) +
+    labs(x = "Mean decrease Gini",
+         y = "",
+         title = "Random Forest Model",
+         subtitle = paste(scales::percent(d_graf$acc[[1]]), "Accuracy"))
+}
+
+# variable importance plot
+plot_rf <- rf_model %>%
+  list(acc = tab_acc$acc[1]) %>%
+  d_graf_imp("darkblue") %>%
+  graf_imp()
+
+# partial dependency plot (PDP)
 X <- dplyr::select(test_data, -sct.favorable)
-predictor <- Predictor$new(rf_model, data = X, y = as.numeric(test_data$sct.favorable))
-# imp <- FeatureImp$new(predictor, loss = 'mae')
-# plot(imp)
+predictor <- Predictor$new(rf_model, data = X,
+                           y = test_data$sct.favorable,
+                           class = 2)
+vars <- c("case.claim", "judge.tenure", "judge.pay", "election.share")
 
-ale = FeatureEffect$new(predictor, feature = 'case.claim')
-ale$plot()
-ale = FeatureEffect$new(predictor, feature = 'judge.tenure')
-ale$plot()
-ale = FeatureEffect$new(predictor, feature = 'judge.pay')
-ale$plot()
-ale = FeatureEffect$new(predictor, feature = 'election.share')
-ale$plot()
+pdp <- map(vars, ~{
+  ale <- FeatureEffect$new(predictor, feature = .x, method = "pdp")
+  ale$plot() +
+    theme_bw(14) +
+    ggtitle(.x)
+})
+
+plot_pdp <- reduce(pdp, `+`)
+
+out <- list(tab_latex, plot_rf, plot_pdp)
+readr::write_rds(out, "plots/out.rds")
