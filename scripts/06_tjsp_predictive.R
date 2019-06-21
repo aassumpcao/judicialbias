@@ -1,3 +1,4 @@
+rm(list = ls())
 library(tidyverse)
 library(patchwork)
 library(recipes)
@@ -135,9 +136,9 @@ caret_xgb_model <- caret::train(
 # predictions
 predictions <- tibble::tibble(
   pred_rf = predict(rf_model, test_data),
-  pred_gbm = predict(caret_xgb_model, test_data),
-  pred_lasso = predict(caret_glm_model, test_data),
-  pred_dnn = as.factor(predict_classes(dnn_model, as.matrix(test_data_dnn[,-1])))
+  # pred_gbm = predict(caret_xgb_model, test_data),
+  # pred_lasso = predict(caret_glm_model, test_data),
+  # pred_dnn = as.factor(predict_classes(dnn_model, as.matrix(test_data_dnn[,-1])))
 ) %>% bind_cols(select(tjsp_test, sct.favorable))
 
 # accuracy / kappa table
@@ -207,6 +208,7 @@ labs <- c("Judge Tenure (days)",
           "Case claim (Brazilian Reais)",
           "Judge Pay (Brazilian Reais)",
           "Election Share")
+
 
 pdp <- map2(vars, labs, ~{
   ale <- FeatureEffect$new(predictor, feature = .x, method = "pdp")
