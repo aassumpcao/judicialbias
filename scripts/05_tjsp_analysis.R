@@ -567,3 +567,6 @@ ggplot(data = rdData) +
 # save plot
 ggsave('rd-plot.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
        width = 7, height = 5)
+
+# remove everything for serial sourcing
+rm(list = ls())

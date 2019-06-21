@@ -50,3 +50,4 @@ unused/
 *.Rda
 *.html
 *.tex
+scripts/06_tjsp_predictiveAA.R
