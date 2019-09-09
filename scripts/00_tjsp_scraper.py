@@ -7,26 +7,12 @@
 # andre.assumpcao@gmail.com
 
 # import standard libraries
-import codecs
-import glob
-import importlib
-import math
-import numpy as np
-import os
 import pandas as pd
-import re
-import time
-import datetime
 
 # import third-party and local libraries
-from selenium                          import webdriver
-from selenium.common.exceptions        import StaleElementReferenceException
-from selenium.common.exceptions        import TimeoutException
+from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by      import By
-from selenium.webdriver.common.keys    import Keys
-from selenium.webdriver.support        import expected_conditions as EC
-from selenium.webdriver.support.ui     import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait
 import tjsp
 
 # # reload module if necessary

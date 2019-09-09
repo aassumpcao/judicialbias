@@ -11,59 +11,37 @@ library(magrittr)
 # load data
 load('data/candidatesSP.Rda')
 load('data/results.Rda')
-load('data/sections2004.Rda')
-load('data/sections2008.Rda')
-load('data/sections2012.Rda')
-load('data/sections2016.Rda')
+load('data/sections.Rda')
 load('data/vacancies.Rda')
 
 ### wrangle candidate datasets to match results
 # filter candidates by election unit, year and candidate number
-cities   <- candidatesSP %$% unique(election.ID)
-people   <- candidatesSP %$% unique(candidate.number)
-joinkey1 <- c('election.ID' = 'SIGLA_UE', 'candidate.ID',
-              'election.stage' = 'NUM_TURNO', 'election.year' = 'ANO_ELEICAO')
+joinkey1 <- c('election.ID' = 'SIGLA_UE', 'candidate.number' = 'NUMERO_CAND',
+              'election.year' = 'ANO_ELEICAO')
 joinkey2 <- c('election.ID' = 'SIGLA_UE', 'candidate.number' = 'NUM_VOTAVEL',
-              'election.stage' = 'NUM_TURNO', 'election.year' = 'ANO_ELEICAO')
+              'election.year' = 'ANO_ELEICAO')
 
-# prepare valid results dataset
+# edit results to match information on candidatesSP set
 results %<>%
-  mutate(candidate.ID = SQ_CANDIDATO) %>%
-  group_by(SIGLA_UE, NUM_TURNO, ANO_ELEICAO, candidate.ID) %>%
-  summarize(votes = sum(TOTAL_VOTOS)) %>%
-  ungroup() %>%
+  filter(NUM_TURNO == 1) %>%
   mutate_all(as.character)
-
-# prepare results-by-section dataset by filtering the relevant cities in which
-# candidates ran for office
-sections2004 %<>% filter(SIGLA_UE %in% cities)
-sections2008 %<>% filter(SIGLA_UE %in% cities)
-sections2012 %<>% filter(SIGLA_UE %in% cities)
-sections2016 %<>% filter(SIGLA_UE %in% cities)
-
-# bind datasets, and create votes variable
-section <- bind_rows(sections2004, sections2008, sections2012, sections2016) %>%
-  group_by(SIGLA_UE, NUM_TURNO, CODIGO_CARGO, ANO_ELEICAO) %>%
-  mutate(election.votes = sum(QTDE_VOTOS)) %>%
-  group_by(NUM_VOTAVEL, add = TRUE) %>%
-  summarize(votes = sum(QTDE_VOTOS), election.votes = first(election.votes)) %>%
-  ungroup() %>%
+sections %<>%
+  filter(NUM_TURNO == 1 & !(NUM_VOTAVEL %in% c(95, 96, 97))) %>%
   mutate_all(as.character) %>%
-  filter(!(NUM_VOTAVEL %in% c(95, 96, 97))) %>%
-  arrange(SIGLA_UE, ANO_ELEICAO, CODIGO_CARGO, NUM_TURNO, desc(votes)) %>%
-  group_by(SIGLA_UE, ANO_ELEICAO, CODIGO_CARGO, NUM_TURNO) %>%
-  mutate(rank = row_number())
+  group_by(ANO_ELEICAO, SIGLA_UE, CODIGO_CARGO) %>%
+  arrange(ANO_ELEICAO, SIGLA_UE, CODIGO_CARGO, desc(as.integer(voto.secao))) %>%
+  mutate(rank = row_number()) %>%
+  ungroup()
 
 # join candidates and valid results
 tseCandidates <- candidatesSP %>%
   mutate_all(as.character) %>%
   left_join(results, by = joinkey1) %>%
-  mutate(votes = ifelse(is.na(votes) | votes == 0, NA_character_, votes)) %>%
   select(-candidate.plaintiff, -trial.outcome, -exp) %>%
-  left_join(section, by = joinkey2) %>%
-  filter(!is.na(votes.x) | !is.na(votes.y)) %>%
-  mutate(candidate.votes = ifelse(is.na(votes.x), votes.y, votes.x)) %>%
-  select(-votes.x, -CODIGO_CARGO, -votes.y)
+  left_join(sections, by = joinkey2) %>%
+  filter(!is.na(voto.municipio) | !is.na(voto.secao)) %>%
+  mutate(votes = ifelse(is.na(voto.municipio), voto.secao, voto.municipio)) %>%
+  select(-matches('\\.[xy]$'))
 
 # edit vacancies dataset before joining onto sections
 vacancies %<>%
@@ -81,17 +59,19 @@ joinkey3 <- c('election.ID', 'election.year', 'office.ID')
 # create final dataset with SP candidates and their results
 tseCandidates %<>%
   left_join(vacancies, by = joinkey3) %>%
-  select(1:33, 57) %>%
+  select(1:33, 58) %>%
   group_by(election.year, candidate.ssn) %>%
   filter(rank == max(rank)) %>%
   filter(n() == 1) %>%
   ungroup() %>%
-  mutate_at(vars(election.votes, office.vacancies), as.integer) %>%
-  mutate(total.votes = election.votes,
-    election.votes = case_when(office.ID == 11 ~ floor(election.votes / 2),
-    office.ID == 13 ~ floor(election.votes / office.vacancies))
+  mutate_at(vars(votes, office.vacancies), as.integer) %>%
+  mutate(
+    total.votes = votes, election.votes = case_when(
+      office.ID == 11 ~ floor(votes / 2),
+      office.ID == 13 ~ floor(votes / office.vacancies)
+    )
   ) %>%
-  mutate(candidate.elected = ifelse(candidate.votes >= election.votes, 1, 0))%>%
+  mutate(candidate.elected = ifelse(votes >= election.votes, 1, 0)) %>%
   select(
     matches('^elect|^tot'), matches('^off'), matches('^candidate'),
     matches('^candidacy'), everything(), -rank
@@ -99,6 +79,7 @@ tseCandidates %<>%
   mutate_all(as.character)
 
 # save dataset to file
+write_csv(tseCandidates, 'data/tseCandidates.csv')
 save(tseCandidates, file = 'data/tseCandidates.Rda')
 
 # remove everything for serial sourcing
