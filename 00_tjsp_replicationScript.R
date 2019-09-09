@@ -42,6 +42,11 @@ rstudioapi::openProject('2019 Judicial Bias.Rproj')
 
 # wrangle candidate data
 source('scripts/01_tjsp_candidates.R')
+system2('python scripts/00_tjsp_scraper.py &')
+system2('python scripts/01_tjsp_lawsuits.py &')
+system2('python scripts/02_tjsp_scraper.py &')
+system2('python scripts/03_tjsp_random_cases.py &')
+system2('python scripts/04_tjsp_parser.py &')
 
 # wrangle judicial data
 source('scripts/02_tjsp_sentences.R')
@@ -54,10 +59,6 @@ source('scripts/04_tjsp_analysis_prep.R')
 
 # python3.7: install packages from requirements.txt to run the next script.
 system2('cat scripts/requirements.txt | xargs -n 1 pip install')
-
-# python3.7: create judicial outcome  algorithm from all sentences. this
-# script takes 25 hours to run on a big memory (500g) cluster. use with caution.
-system2('python scripts/99_tjsp_sct_outcome.py &')
 
 # produce paper analysis
 source('scripts/05_tjsp_analysis.R')

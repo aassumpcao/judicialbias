@@ -73,7 +73,7 @@ os.chdir('./html')
 for i, (number, person) in enumerate(cases.items()):
 
     # run scraper
-    nothing = tjsp.scraper(browser).decision(number)
+    nothing = tjsp.scraper(browser).case(number)
 
     # list files in directory, get the latest file, and create new name
     files   = glob.glob('./*')

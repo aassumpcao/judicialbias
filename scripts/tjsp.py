@@ -247,7 +247,8 @@ class scraper:
     # search method taking in case number as argument
     def case(self, number):
 
-        """ this case method downloads the case document using the case
+        """
+            this case method downloads the case document using the case
             number provided by the user.
         """
 

@@ -1,4 +1,4 @@
-### judicial favoritism of politicians
+
 # this script produces paper analysis
 # author: andre assumpcao
 # email:  andre.assumpcao@gmail.com

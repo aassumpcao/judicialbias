@@ -116,6 +116,7 @@ tjspSentences <- tjspSummary %>%
 
 # save to file
 save(tjspSentences, file = 'data/tjspSentences.Rda')
+write_csv(tjspSentences, path = 'data/tjspSentences.csv')
 
 # remove everything for serial sourcing
 rm(list = ls())
