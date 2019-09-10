@@ -486,6 +486,9 @@ class parser:
         text = pd.DataFrame(text)
         text.columns = ['updates', 'values']
 
+        # return text
+        return text
+
     #4 parse petitions
     def parse_petitions(self):
 

@@ -42,11 +42,27 @@ rstudioapi::openProject('2019 Judicial Bias.Rproj')
 
 # wrangle candidate data
 source('scripts/01_tjsp_candidates.R')
-system2('python scripts/00_tjsp_scraper.py &')
-system2('python scripts/01_tjsp_lawsuits.py &')
-system2('python scripts/02_tjsp_scraper.py &')
-system2('python scripts/03_tjsp_random_cases.py &')
-system2('python scripts/04_tjsp_parser.py &')
+
+# python3.7: install packages from requirements.txt to run the next script.
+system2('cat scripts/requirements.txt | xargs -n 1 pip install')
+
+# find lawsuits by politician using their SSN
+system2('python3.7 scripts/00_tjsp_scraper.py &')
+
+# merge court id with municipality id
+system2('python3.7 scripts/01_tjsp_lawsuits.py &')
+
+# download court documents for cases involving politicians
+system2('python3.7 scripts/02_tjsp_scraper.py &')
+
+# download court documents for random cases at the same sct
+system2('python3.7 scripts/03_tjsp_random_cases.py &')
+
+# parse politician court documents
+system2('python3.7 scripts/04_tjsp_parser.py &')
+
+# parse random cases court documents
+system2('python3.7 scripts/05_tjsp_parser_random_cases.py &')
 
 # wrangle judicial data
 source('scripts/02_tjsp_sentences.R')
@@ -56,9 +72,6 @@ source('scripts/03_tjsp_judges.R')
 
 # prepare analysis for paper
 source('scripts/04_tjsp_analysis_prep.R')
-
-# python3.7: install packages from requirements.txt to run the next script.
-system2('cat scripts/requirements.txt | xargs -n 1 pip install')
 
 # produce paper analysis
 source('scripts/05_tjsp_analysis.R')
