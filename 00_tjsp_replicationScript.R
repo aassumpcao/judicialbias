@@ -63,6 +63,7 @@ system2('python3.7 scripts/04_tjsp_parser.py &')
 
 # parse random cases court documents
 system2('python3.7 scripts/05_tjsp_parser_random_cases.py &')
+system2('python3.7 scripts/06_tjsp_fix_parsing.py &')
 
 # wrangle judicial data
 source('scripts/02_tjsp_sentences.R')

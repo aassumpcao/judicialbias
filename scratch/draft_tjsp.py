@@ -322,3 +322,19 @@ for i in browser.find_elements_by_xpath(caseclass):
 tjsp.scraper(browser).case('Micheloni')
 
 
+import pandas as pd
+import os, re
+
+# define args and load csv
+kwargs = {'header': None, 'dtype': str, 'index_col': 0}
+summary = pd.read_csv('data/sctSummary_random.csv', **kwargs)
+
+# pull column names out, reset index, and drop invalid column
+columns = summary.iloc[0].to_list()[:10]
+summary = summary.reset_index(drop = True)
+summary.drop(0, axis = 0, inplace = True)
+
+# filter sct cases only
+summary = summary[summary.iloc[:,1]=='Procedimento do Juizado Especial Cível']
+summary = summary.iloc[:,0:10]
+summary.columns = columns
