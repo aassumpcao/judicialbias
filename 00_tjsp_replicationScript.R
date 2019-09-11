@@ -67,6 +67,7 @@ system2('python3.7 scripts/06_tjsp_fix_parsing.py &')
 
 # wrangle judicial data
 source('scripts/02_tjsp_sentences.R')
+source('scripts/03_tjsp_random_sentences.R')
 
 # wrangle judge data
 source('scripts/03_tjsp_judges.R')

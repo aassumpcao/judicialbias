@@ -52,3 +52,4 @@ unused/
 *.tex
 scripts/06_tjsp_predictiveAA.R
 sftp-config.json
+html.zip

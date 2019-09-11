@@ -321,7 +321,7 @@ for i in browser.find_elements_by_xpath(caseclass):
 
 tjsp.scraper(browser).case('Micheloni')
 
-
+# import statements
 import pandas as pd
 import os, re
 
@@ -335,6 +335,6 @@ summary = summary.reset_index(drop = True)
 summary.drop(0, axis = 0, inplace = True)
 
 # filter sct cases only
-summary = summary[summary.iloc[:,1]=='Procedimento do Juizado Especial Cível']
+summary = summary[summary.iloc[:,1] == 'Procedimento do Juizado Especial Cível']
 summary = summary.iloc[:,0:10]
 summary.columns = columns
