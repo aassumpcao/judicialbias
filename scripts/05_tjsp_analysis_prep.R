@@ -2,7 +2,7 @@
 # this script prepares all data for analysis
 # author: andre assumpcao
 # by andre.assumpcao@gmail.com
-rm(list = ls())
+
 ### import statements
 # import packages
 library(tidyverse)
@@ -105,24 +105,55 @@ tjspAnalysisRandom %<>%
   mutate(case.duration = c %>% {ifelse(. < 1, median(., na.rm = TRUE), .)}) %>%
   select(-t, -c)
 
-# fill in missing gender of judges
+# fill in missing gender of judges in politicians dataset
 names <- tjspAnalysis[is.na(tjspAnalysis$judge.gender), 'judge'] %>% unlist()
 names %<>% {ifelse(str_detect(., 'carlos'), 'Male', 'Female')}
 names[is.na(names)] <- 'Male'
 tjspAnalysis[is.na(tjspAnalysis$judge.gender), 'judge.gender'] <- names
 
+# fill in missing gender of judges in random dataset
+names <- tjspAnalysisRandom[is.na(tjspAnalysisRandom$judge.gender), 'judge'] %>%
+         unlist()
+names %<>% {ifelse(str_detect(.,'marcus|murillo') | is.na(.), 'Male', 'Female')}
+tjspAnalysisRandom[is.na(tjspAnalysisRandom$judge.gender),'judge.gender']<-names
+
 # anonymize judge names
-tjspAnalysis %<>% {mutate(., judge = group_indices(., judge))}
+tjspAnalysis %>% {mutate(., judge = group_indices(., judge))}
+
+# create variables to match cases in random and politician datasets
+one_up <- tjspAnalysis$caseID %>% str_sub(1, 7) %>% as.integer() + 1
+one_dw <- tjspAnalysis$caseID %>% str_sub(1, 7) %>% as.integer() - 1
+match <- str_pad(c(one_up, one_dw), 7, 'left', '0')
+
+# create matching dataset
+match.cases <- tibble(caseID = rep(tjspAnalysis$caseID, 2), match = match) %>%
+               mutate(key = paste0(match, str_sub(caseID, 10, 20)))
+
+# match on random cases
+tjspAnalysisRandom %<>%
+  mutate(key = paste0(str_sub(caseID, 1, 7), str_sub(caseID, 10, 20))) %>%
+  left_join(match.cases, 'key') %>%
+  group_by(caseID.x) %>%
+  filter(row_number() == 1) %>%
+  rename(caseID = caseID.x, politician.case = caseID.y) %>%
+  inner_join(tjspAnalysis, 'caseID') %>%
+  ungroup() %>%
+  select(1:12, politician.case, matches('^judge(.)*y$'))
 
 # match circuit and municipal information
-rows <- match(tjspAnalysis$caseID, str_remove_all(tjspMun$caseID, '\\.|-'))
+rows1 <- match(tjspAnalysis$caseID, str_remove_all(tjspMun$caseID, '\\.|-'))
+rows2 <- match(
+  tjspAnalysisRandom$politician.case, str_remove_all(tjspMun$caseID, '\\.|-')
+)
 
 # create new variables containing circuit, electoral district, and municipal
 # information
-tjspAnalysis$tjsp.ID <- unlist(tjspMun[rows, 'tj'])
-tjspAnalysis$ibge.ID <- unlist(tjspMun[rows, 'ibge'])
+tjspAnalysis$tjsp.ID <- unlist(tjspMun[rows1, 'tj'])
+tjspAnalysis$ibge.ID <- unlist(tjspMun[rows1, 'ibge'])
+tjspAnalysisRandom$tjsp.ID <- unlist(tjspMun[rows2, 'tj'])
+tjspAnalysisRandom$ibge.ID <- unlist(tjspMun[rows2, 'ibge'])
 
-# create list of useless variables
+# create list of useless variables for candidates cases
 vars <- c(8:13, 16, 17, 21, 26:28, 30, 33, 35, 37, 40, 46:47, 50, 51, 54, 56)
 
 # drop useless vars
@@ -144,8 +175,14 @@ tjspAnalysis %<>%
     matches('^par')
   )
 
+# do the same for random cases
+varNames <- names(tjspAnalysisRandom)
+varNames[1:7] <- c(paste0('case.', varNames[1:6]), 'case.ID')
+varNames %<>% str_remove_all('\\.(x|y)$')
+
 # save to file
-save(tjspAnalysis, file = 'data/tjspFinal.Rda')
+save(tjspAnalysis, file = 'data/tjspAnalysis.Rda')
+save(tjspAnalysisRandom, file = 'data/tjspAnalysisRandom.Rda')
 
 # remove everything for serial sourcing
 rm(list = ls())

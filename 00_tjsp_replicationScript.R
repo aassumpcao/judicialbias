@@ -76,4 +76,5 @@ source('scripts/04_tjsp_judges.R')
 source('scripts/05_tjsp_analysis_prep.R')
 
 # produce paper analysis
-source('scripts/05_tjsp_analysis.R')
+source('scripts/06_tjsp_analysis1.R')
+source('scripts/07_tjsp_analysis2.R')
