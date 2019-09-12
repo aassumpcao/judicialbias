@@ -2,7 +2,7 @@
 # this script prepares all data for analysis
 # author: andre assumpcao
 # by andre.assumpcao@gmail.com
-
+rm(list = ls())
 ### import statements
 # import packages
 library(tidyverse)
@@ -14,8 +14,27 @@ load('data/tjspJudges.Rda')
 load('data/tjspMun.Rda')
 load('data/tjspSentences.Rda')
 load('data/tseCandidates.Rda')
+tjspSentencesRandom <- read_csv('data/tjspSentencesRandom.csv')
+tjspLitigantsRandom <- read_csv('data/tjspLitigantsRandom.csv')
 
 ### wrangle datasets
+# narrrow random litigants dataset to main litigant only
+tjspFinalRandom <- tjspLitigantsRandom %>%
+  group_by(id) %>%
+  filter(row_number() == 1) %>%
+  ungroup() %>%
+  right_join(tjspSentencesRandom, c('id' = 'Processo'))
+
+# reorder columns to match candidates dataset
+tjspAnalysisRandom <- select(
+  tjspFinalRandom, Classe, Área, Assunto, Distribuição, Juiz, 16, id,
+    claimant.sex, defendant.sex, clawyers.sex, dlawyers.sex, claimant.win,
+    updates
+)
+
+# rename random dataset
+names(tjspAnalysisRandom)[1:7] <- names(tjspSentences)[1:7]
+
 # join tjsp and tse data
 tjspAnalysis <- tjspSentences %>%
   left_join(ungroup(tseCandidates), c('candidateID.x' = 'scraper.id')) %>%
@@ -56,6 +75,12 @@ tjspAnalysis %<>%
   mutate_at(vars(judge), ~str_remove_all(., '\\^|~|\'|\\"')) %>%
   mutate_at(vars(judge), str_squish)
 
+tjspAnalysisRandom %<>%
+  mutate_at(vars(judge),  str_to_lower) %>%
+  mutate_at(vars(judge), ~iconv(., 'UTF-8', 'ASCII//TRANSLIT')) %>%
+  mutate_at(vars(judge), ~str_remove_all(., '\\^|~|\'|\\"')) %>%
+  mutate_at(vars(judge), str_squish)
+
 # reformat judge spelling in tjsp pay database
 tjspJudges$judge.name %<>% str_to_lower()
 
@@ -63,7 +88,17 @@ tjspJudges$judge.name %<>% str_to_lower()
 tjspAnalysis %<>%
   fuzzyjoin::fuzzy_left_join(tjspJudges, joinkey, match_fun = str_detect) %>%
   mutate(judge.pay = judge.pay %>% {ifelse(is.na(.), '35023.25', .)}) %>%
-  mutate_at(vars(4, 15, 56), ~as.Date(., '%d/%m/%Y')) %>%
+  mutate_at(vars(4, 15, 57), ~as.Date(., '%d/%m/%Y')) %>%
+  mutate(t = as.numeric(updates - judge.tenure.start)) %>%
+  mutate(c = as.numeric(updates - assignment)) %>%
+  mutate(judge.tenure  = t %>% {ifelse(. < 1, median(., na.rm = TRUE), .)}) %>%
+  mutate(case.duration = c %>% {ifelse(. < 1, median(., na.rm = TRUE), .)}) %>%
+  select(-t, -c)
+
+tjspAnalysisRandom %<>%
+  fuzzyjoin::fuzzy_left_join(tjspJudges, joinkey, match_fun = str_detect) %>%
+  mutate(judge.pay = judge.pay %>% {ifelse(is.na(.), '35023.25', .)}) %>%
+  mutate_at(vars(4, 13, 16), ~as.Date(., '%d/%m/%Y')) %>%
   mutate(t = as.numeric(updates - judge.tenure.start)) %>%
   mutate(c = as.numeric(updates - assignment)) %>%
   mutate(judge.tenure  = t %>% {ifelse(. < 1, median(., na.rm = TRUE), .)}) %>%

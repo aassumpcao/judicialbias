@@ -70,10 +70,10 @@ source('scripts/02_tjsp_sentences.R')
 source('scripts/03_tjsp_random_sentences.R')
 
 # wrangle judge data
-source('scripts/03_tjsp_judges.R')
+source('scripts/04_tjsp_judges.R')
 
 # prepare analysis for paper
-source('scripts/04_tjsp_analysis_prep.R')
+source('scripts/05_tjsp_analysis_prep.R')
 
 # produce paper analysis
 source('scripts/05_tjsp_analysis.R')
