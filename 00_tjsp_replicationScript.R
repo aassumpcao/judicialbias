@@ -1,13 +1,13 @@
 ### judicial favoritism of politicians
-# master script
-#   this is the master script for the reproduction of the entire work in chapter
-#   two of my dissertation. it contains two large groups of scripts (r and
-#   python): data wrangling (or munging) and analysis. i indicate below the
-#   execution times for either group when scripts took longer than 15 minutes
-#   to execute. if you have r, rstudio, and python installed on the computer,
-#   you can source this script from the top. if you would like further
-#   clarification on how to go about these scripts, please email me at the
-#   address below.
+#  master script:
+#  this is the master script for the reproduction of the entire work in chapter
+#  two of my dissertation. it contains two large groups of scripts (r and
+#  python): data wrangling (or munging) and analysis. i indicate below the
+#  execution times for either group when scripts took longer than 15 minutes
+#  to execute. if you have r, rstudio, and python installed on the computer,
+#  you can source this script from the top. if you would like further
+#  clarification on how to go about these scripts, please email me at the
+#  address below.
 # author: andre assumpcao
 # by: andre.assumpcao@gmail.com
 #     jtrecenti@abj.org.br

@@ -1,7 +1,8 @@
-
-# this script produces paper analysis
-# author: andre assumpcao
-# email:  andre.assumpcao@gmail.com
+### judicial favoritism of politicians
+#  this script produces paper analysis
+# andre assumpcao and julio trecenti
+# email: andre.assumpcao@gmail.com
+# email: julio.trecenti@gmail.com
 
 # for testing
 rm(list = ls())
@@ -17,27 +18,41 @@ library(tidyverse)
 library(xtable)
 
 # load data
-load('data/tjspFinal.Rda')
-load('data/tjspSimulation1.Rda')
-load('data/tjspSimulation2.Rda')
-
-### function definitions
-# (blank)
+load('data/tjspAnalysis.Rda')
+load('data/tjspAnalysisRandom.Rda')
+# load('data/tjspSimulation1.Rda')
+# load('data/tjspSimulation2.Rda')
 
 ### define variable labels
 # outcome label
 outcomeLabel <- 'SCT Favorable Outcome'
 
 # create list of covariates
-covariates <- c(10, 6, 11:13, 25, 31:32, 36, 34, 29, 30)
-covarLabel <- c('Case Duration (in days)', 'Amount Claimed (in R$)',
-                'Pay (in R$)', 'Male', 'Tenure (in days)',  'Age', 'Male',
-                'Political Experience', 'Campaign Expenditures (in R$)',
-                'Elected', 'Level of Education', 'Marital Status')
+covariates <- c(
+  'case.duration', 'case.claim', 'judge.gender', 'judge.pay', 'judge.tenure',
+  'candidate.age', 'candidate.gender', 'candidate.experience',
+  'candidate.expenditure', 'candidate.elected', 'candidate.education',
+  'candidate.maritalstatus'
+)
+covarLabel <- c(
+  'Case Duration (in days)', 'Amount Claimed (in R$)', 'Male', 'Pay (in R$)',
+  'Tenure (in days)', 'Age', 'Male', 'Political Experience',
+  'Campaign Expenditures (in R$)', 'Elected', 'Level of Education',
+  'Marital Status'
+)
 
 # define variable types for analysis
-integers <- c(6, 9, 11, 19, 25, 31:32, 34, 36)
-factors  <- c(3, 5, 12, 14:16, 26:30, 35, 37, 38)
+integers <- c(
+  'case.duration', 'case.claim', 'case.claimant.win', 'judge.pay',
+  'candidate.age', 'candidate.male', 'candidate.experience',
+  'candidate.expenditure'
+)
+factors <- c(
+  'case.subject', 'case.judge', 'tjsp.ID', 'ibge.ID', 'election.ID',
+  'candidate.ethnicity', 'candidate.gender', 'candidate.occupation',
+  'candidate.education', 'candidate.maritalstatus', 'candidacy.situation',
+  'party.number', 'party.coalition'
+)
 
 ### wrangle variables one final time
 # change variable types
@@ -46,7 +61,26 @@ tjspAnalysis %<>%
   mutate(case.claim = str_replace_all(case.claim, '\\,', '.') %>% trimws()) %>%
   mutate_at(vars(integers), as.integer) %>%
   mutate_at(vars(factors), as.factor) %>%
-  mutate(judge.gender = judge.gender %>% {ifelse(. == 'Female', 0, 1)})
+  mutate(judge.gender = as.integer(ifelse(judge.gender == 'Female', 0, 1))) %>%
+  mutate(
+    candidate.gender = as.integer(ifelse(candidate.gender == 'FEMININO', 0, 1)),
+    candidate.elect = ifelse(total.votes > election.votes, 1, 0)
+  )
+
+# do the same for random cases
+integers <- c('case.claim', 'judge.pay', 'judge.tenure')
+factors  <- c('case.subject', 'case.judge', 'tjsp.ID', 'ibge.ID')
+
+# wrangle random cases data
+tjspAnalysisRandom %<>%
+  mutate(case.claim = str_replace_all(case.claim, '\\.|R\\$', '')) %>%
+  mutate(case.claim = str_replace_all(case.claim, '\\,', '.') %>% trimws()) %>%
+  mutate_at(vars(integers), as.integer) %>%
+  mutate_at(vars(factors), as.factor) %>%
+  mutate_at(
+    vars(claimant.sex, defendant.sex, clawyers.sex, dlawyers.sex, judge.gender),
+    ~as.integer(ifelse(. == 'Female', 0, 1))
+  )
 
 # filling in missing values for analysis (always median)
 missing.claims <- median(as.numeric(tjspAnalysis$case.claim), na.rm = TRUE)
@@ -56,9 +90,21 @@ tjspAnalysis[is.na(tjspAnalysis$case.claim), 'case.claim'] <- missing.claims
 tjspAnalysis %<>%
   mutate(case.claim = case.claim %>% {ifelse(. > 40000, missing.claims, .)})
 
+# filling in missing values for analysis (always median) for random cases
+missing.claims <- median(as.numeric(tjspAnalysisRandom$case.claim), na.rm = T)
+missing.claims -> tjspAnalysisRandom[
+  is.na(tjspAnalysisRandom$case.claim), 'case.claim'
+]
+
+# fix claims with errors (> 40,000)
+tjspAnalysisRandom %<>%
+  mutate(case.claim = case.claim %>% {ifelse(. > 40000, missing.claims, .)})
+
 # fix median tenure time
-missing.tenure <- median(as.numeric(tjspAnalysis$judge.tenure), na.rm = TRUE)
-tjspAnalysis[is.na(tjspAnalysis$judge.tenure), 'judge.tenure'] <- missing.tenure
+missing.tenure <- median(as.numeric(tjspAnalysisRandom$judge.tenure), na.rm = T)
+missing.tenure -> tjspAnalysisRandom[
+  is.na(tjspAnalysisRandom$judge.tenure), 'judge.tenure'
+]
 
 # create outcome variable for case
 tjspAnalysis %<>%
@@ -73,7 +119,8 @@ tjspAnalysis %<>%
 stargazer(
 
   # summmary table
-  as.data.frame(tjspAnalysis[, covariates[1:2]]),
+  tjspAnalysis[, c('case.duration', 'case.claim', 'sct.favorable')] %>%
+    as.data.frame(),
 
   # table cosmetics
   type = 'latex',
@@ -82,10 +129,81 @@ stargazer(
   summary = TRUE,
   # out = 'tables/sumstats.tex',
   out.header = FALSE,
-  covariate.labels = covarLabel[1:2],
+  covariate.labels = c(covarLabel[1:2], 'Pro-Politician Ruling'),
   align = FALSE,
   digit.separate = 3,
-  digits = 0,
+  digits = 3,
+  digits.extra = 3,
+  font.size = 'scriptsize',
+  header = FALSE,
+  initial.zero = FALSE,
+  model.names = FALSE,
+  label = 'tab:sumstats',
+  no.space = FALSE,
+  table.placement = '!htbp',
+  summary.logical = TRUE,
+  summary.stat = c('n', 'mean', 'sd', 'min', 'max')
+)
+
+# produce summary statistics table (judge level)
+stargazer(
+
+  # summmary table
+  tjspAnalysis %>%
+    select(case.judge, judge.gender, judge.tenure, judge.pay) %>%
+    group_by(case.judge) %>%
+    filter(row_number() == 1) %>%
+    replace_na(list(judge.tenure = 3382)) %>%
+    as.data.frame(),
+
+  # table cosmetics
+  type = 'latex',
+  title = 'Descriptive Statistics',
+  style = 'default',
+  summary = TRUE,
+  # out = 'tables/sumstats.tex',
+  out.header = FALSE,
+  covariate.labels = covarLabel[c(3,5,4)],
+  align = FALSE,
+  digit.separate = 3,
+  digits = 3,
+  digits.extra = 3,
+  font.size = 'scriptsize',
+  header = FALSE,
+  initial.zero = FALSE,
+  model.names = FALSE,
+  label = 'tab:sumstats',
+  no.space = FALSE,
+  table.placement = '!htbp',
+  summary.logical = TRUE,
+  summary.stat = c('n', 'mean', 'sd', 'min', 'max')
+)
+
+# produce summary statistics table
+stargazer(
+
+  # summmary table
+  tjspAnalysis %>%
+    select(
+      candidate.ssn, candidate.age, candidate.gender, candidate.experience,
+      candidate.expenditure, candidate.elect
+      ### candidate.elect needs to be added manually
+    ) %>%
+    group_by(candidate.ssn) %>%
+    filter(row_number() == 1) %>%
+    as.data.frame(),
+
+  # table cosmetics
+  type = 'latex',
+  title = 'Descriptive Statistics',
+  style = 'default',
+  summary = TRUE,
+  # out = 'tables/sumstats.tex',
+  out.header = FALSE,
+  covariate.labels = covarLabel[c(6:8, 10, 9)],
+  align = FALSE,
+  digit.separate = 3,
+  digits = 3,
   digits.extra = 0,
   font.size = 'scriptsize',
   header = FALSE,
@@ -97,72 +215,6 @@ stargazer(
   summary.logical = TRUE,
   summary.stat = c('n', 'mean', 'sd', 'min', 'max')
 )
-# produce summary statistics table (judge level)
-tjspAnalysis %>%
-  select(5, covariates[3:5]) %>%
-  group_by(case.judge) %>%
-  filter(row_number() == 1) %>%
-  {stargazer(
-
-    # summmary table
-    as.data.frame(.),
-
-    # table cosmetics
-    type = 'latex',
-    title = 'Descriptive Statistics',
-    style = 'default',
-    summary = TRUE,
-    # out = 'tables/sumstats.tex',
-    out.header = FALSE,
-    covariate.labels = covarLabel[3:5],
-    align = FALSE,
-    digit.separate = 3,
-    digits = 3,
-    digits.extra = 3,
-    font.size = 'scriptsize',
-    header = FALSE,
-    initial.zero = FALSE,
-    model.names = FALSE,
-    label = 'tab:sumstats',
-    no.space = FALSE,
-    table.placement = '!htbp',
-    summary.logical = TRUE,
-    summary.stat = c('n', 'mean', 'sd', 'min', 'max')
-  )
-}
-# produce summary statistics table
-tjspAnalysis %>%
-  select(candidate.ssn, covariates[6:10]) %>%
-  group_by(candidate.ssn) %>%
-  filter(row_number() == 1) %>%
-  {stargazer(
-
-    # summmary table
-    as.data.frame(.),
-
-    # table cosmetics
-    type = 'latex',
-    title = 'Descriptive Statistics',
-    style = 'default',
-    summary = TRUE,
-    # out = 'tables/sumstats.tex',
-    out.header = FALSE,
-    covariate.labels = covarLabel[6:10],
-    align = FALSE,
-    digit.separate = 3,
-    digits = 3,
-    digits.extra = 0,
-    font.size = 'scriptsize',
-    header = FALSE,
-    initial.zero = FALSE,
-    model.names = FALSE,
-    label = 'tab:sumstats',
-    no.space = FALSE,
-    table.placement = '!htbp',
-    summary.logical = TRUE,
-    summary.stat = c('n', 'mean', 'sd', 'min', 'max')
-  )
-}
 
 ### analysis tables
 # abrams et al (2012) random assignment test. we create a random assignment
