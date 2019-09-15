@@ -20,8 +20,6 @@ library(xtable)
 # load data
 load('data/tjspAnalysis.Rda')
 load('data/tjspAnalysisRandom.Rda')
-# load('data/tjspSimulation1.Rda')
-# load('data/tjspSimulation2.Rda')
 
 ### define variable labels
 # outcome label
@@ -37,7 +35,7 @@ covariates <- c(
 covarLabel <- c(
   'Case Duration (in days)', 'Amount Claimed (in R$)', 'Male', 'Pay (in R$)',
   'Tenure (in days)', 'Age', 'Male', 'Political Experience',
-  'Campaign Expenditures (in R$)', 'Elected', 'Level of Education',
+  'Campaign Expenditures (in R$)', 'Elected to Office', 'Level of Education',
   'Marital Status'
 )
 
@@ -98,7 +96,8 @@ missing.claims -> tjspAnalysisRandom[
 
 # fix claims with errors (> 40,000)
 tjspAnalysisRandom %<>%
-  mutate(case.claim = case.claim %>% {ifelse(. > 40000, missing.claims, .)})
+  mutate(case.claim = case.claim %>% {ifelse(. > 40000, missing.claims, .)}) %>%
+  mutate(defendant.win = car::recode(claimant.win, '1=0;0=1'))
 
 # fix median tenure time
 missing.tenure <- median(as.numeric(tjspAnalysisRandom$judge.tenure), na.rm = T)
@@ -112,7 +111,8 @@ tjspAnalysis %<>%
     case.claimant.win == 1 & str_detect(candidate.litigant.type,'Claimant') ~ 1,
     case.claimant.win == 0 & str_detect(candidate.litigant.type,'Defendant')~ 1
   )) %>%
-  replace_na(list(sct.favorable = 0))
+  replace_na(list(sct.favorable = 0)) %>%
+  mutate(case.defendant.win = car::recode(case.claimant.win, '1=0;0=1'))
 
 ### tables and analysis
 # produce summary statistics table (case level)
@@ -148,7 +148,7 @@ stargazer(
 # produce summary statistics table (judge level)
 stargazer(
 
-  # summmary table
+  # summary table
   tjspAnalysis %>%
     select(case.judge, judge.gender, judge.tenure, judge.pay) %>%
     group_by(case.judge) %>%
@@ -182,15 +182,20 @@ stargazer(
 # produce summary statistics table
 stargazer(
 
-  # summmary table
+  # summary table
   tjspAnalysis %>%
     select(
       candidate.ssn, candidate.age, candidate.gender, candidate.experience,
-      candidate.expenditure, candidate.elect
-      ### candidate.elect needs to be added manually
+      candidate.elect, candidate.expenditure
     ) %>%
     group_by(candidate.ssn) %>%
-    filter(row_number() == 1) %>%
+    summarize(
+      candidate.age = first(candidate.age),
+      candidate.gender = first(candidate.gender),
+      candidate.experience = max(candidate.experience),
+      candidate.elect = mean(candidate.elect),
+      candidate.expenditure = mean(candidate.expenditure)
+    ) %>%
     as.data.frame(),
 
   # table cosmetics
@@ -229,16 +234,21 @@ stargazer(
 # 6. repeat 1,000 times
 
 # 1. compute the number of cases by judge per court
-cases <- count(tjspAnalysis, case.judge) %>%
-         left_join(tjspAnalysis, 'case.judge') %>%
-         select(1:2, tjsp.ID) %>%
-         mutate(tjsp.ID = as.character(tjsp.ID)) %>%
-         distinct(case.judge, .keep_all = TRUE)
+countJudges <- function(dataset) {
+  # 1. count the number of cases per judge, 2. merge on the same dataset to
+  #  recover court ID, and 3. throw away repeated observations
+  count(dataset, case.judge) %>%
+  left_join(dataset, 'case.judge') %>%
+  select(1:2, tjsp.ID) %>%
+  mutate(tjsp.ID = as.character(tjsp.ID)) %>%
+  distinct(case.judge, .keep_all = TRUE) %>%
+  return()
+}
 
 # 2. group cases by court to create sample from which to pull observations
-fromCourts <- function(court, n, var, ...) {
+sampleCourts <- function(dataset, court, n, var, ...) {
   # create sliced dataset from court ID
-  df <- filter(tjspAnalysis, tjsp.ID == court) %>% select(var)
+  df <- filter(dataset, tjsp.ID == court) %>% select(var)
   # draw the number of observations from dataset
   sim <- sample_n(df, as.integer(n), ...)
   # assign new name to variables
@@ -247,11 +257,23 @@ fromCourts <- function(court, n, var, ...) {
   return(sim)
 }
 
-# # draw random cases from 2, fill in columns in 1, and calculate moments 1000
-# # times (steps 3, 4, and 5 at once). DISCLAIMER: 25 minutes running time.
-# # create vector of simulated mean and iqr
-# simulated.mean <- tibble(.rows = 5262)
-# outcome.mean   <- tibble(.rows = 5262)
+# 3. create objects using the countJudges function
+cases <- countJudges(tjspAnalysis)
+casesRandom <- countJudges(tjspAnalysisRandom)
+
+# # 4. create function to execute with monte carlo simulations for covariate age
+# object1 <- tibble(.rows = nrow(tjspAnalysis))
+# object2 <- tibble(.rows = nrow(tjspAnalysisRandom))
+
+# # we have to run this loop three times to produce five datasets:
+# # first run:
+# #   tjspSimulation1.Rda
+# #   tjspSimulation2.Rda
+# # second run:
+# #   tjspSimulation1Random.Rda
+# #   tjspSimulation2Random.Rda
+# # third run:
+# #   tjspSimulation2ClaimantWin.Rda
 
 # # execute loop creating monte carlo simulation for covariate age
 # for (x in 1:1000) {
@@ -259,16 +281,18 @@ fromCourts <- function(court, n, var, ...) {
 #   simulats <- c()
 #   outcomes <- c()
 #   # execute loop to create simulations
-#   for (i in 1:nrow(cases)) {
+#   for (i in 1:nrow(casesRandom)) {
 #     # create list of arguments
-#     args <- list(as.character(cases[i, 3]), cases[i, 2], 'candidate.age',
-#                  replace = TRUE)
-#     # call to fromCourts using args from cases
-#     row <- do.call(fromCourts, args)
+#     args <- list(
+#       tjspAnalysisRandom, as.character(casesRandom[i, 'tjsp.ID']),
+#       casesRandom[i, 'n'], 'claimant.sex', replace = TRUE
+#     )
+#     # call to sampleCourts using args from cases
+#     row <- do.call(sampleCourts, args)
 #     # replace list elements
-#     args[[3]] <- 'sct.favorable'
-#     # call to fromCourts to build outcome
-#     outcome <- do.call(fromCourts, args)
+#     args[[4]] <- 'defendant.win'
+#     # call to sampleCourts to build outcome
+#     outcome <- do.call(sampleCourts, args)
 #     # bind onto vector
 #     simulats <- c(simulats, row)
 #     outcomes <- c(outcomes, outcome)
@@ -277,229 +301,195 @@ fromCourts <- function(court, n, var, ...) {
 #   simulats <- as.numeric(simulats)
 #   outcomes <- as.integer(outcomes)
 #   # extract mean and iqr
-#   simulated.mean <- bind_cols(simulated.mean, sim = simulats)
-#   outcome.mean   <- bind_cols(outcome.mean, sim = outcomes)
+#   object1 <- bind_cols(object1, sim = simulats)
+#   object2 <- bind_cols(object2, sim = outcomes)
 #   # print progress
 #   if (x %% 100 == 0) {print(x)}
 # }
 
 # # save dataset
-# save(simulated.mean, file = 'data/tjspSimulation1.Rda')
-# save(outcome.mean,   file = 'data/tjspSimulation2.Rda')
+# object1 -> simulated.mean
+# object2 -> s.defendant.win02
+# save(simulated.mean,      file = 'data/tjspSimulation1.Rda')
+# save(s.defendant.win02,   file = 'data/tjspSimulation2DefendantWin.Rda')
 
-# uncount variables
-ids <- uncount(cases, n)
+### load datasets and pick up where we left off
+# load data
+load('data/tjspSimulation1.Rda')
+load('data/tjspSimulation2.Rda')
+load('data/tjspSimulation1Random.Rda')
+load('data/tjspSimulation2Random.Rda')
+load('data/tjspSimulation1ClaimantWin.Rda')
+load('data/tjspSimulation1DefendantWin.Rda')
+load('data/tjspSimulation2DefendantWin.Rda')
 
-# bind to simulations and change order of variables
-simulated.mean %<>% bind_cols(ids) %>% select(1001, 1:1000)
-outcome.mean   %<>% bind_cols(ids) %>% select(1001, 1:1000)
+# rename objects
+# the distribution of covariates per judge for politicians and random cases
+s.politician.age <- simulated.mean
+s.politician.win <- outcome.mean
+s.claimant.win01 <- outcome.mean.claimant.win
 
-# summarize covariate and outcome by mean following abrams et al (2012)
-age.simulation.mean <- simulated.mean %>%
-  group_by(case.judge) %>%
-  summarize_all(mean) %>%
-  select(-1)
-sct.simulation.mean <- outcome.mean %>%
-  group_by(case.judge) %>%
-  summarize_all(mean) %>%
-  select(-1)
+# the distribution of outcomes per judge (pro-politician ruling and claimant
+# win in cases involving politicians and random cases)
+s.claimant.sex00 <- simulated.mean.random
+s.claimant.win02 <- outcome.mean.random
 
-# extract moment distributions from simulated and empirical datasets
-age.simulation.mean.distribution <- age.simulation.mean %>%
-  t() %>%
-  as_tibble(.name_repair = 'universal') %>%
-  summarize_all(mean) %>%
-  unlist() %>%
-  unname()
-sct.simulation.mean.distribution <- sct.simulation.mean %>%
-  t() %>%
-  as_tibble(.name_repair = 'universal') %>%
-  summarize_all(mean) %>%
-  unlist() %>%
-  unname()
+# remove old objects
+rm(list = objects(pattern = '(simulated|outcome\\.)'))
 
-# extract moment distributions from simulated datasets
-age.ci <- quantile(age.simulation.mean.distribution, probs = c(.05, .95))
-sct.ci <- quantile(sct.simulation.mean.distribution, probs = c(.05, .95))
+# 3. calculate moments of simulated distribution and return them in a list
+calculateMoments <- function(judges, simulation){
+  # uncount variables
+  ids <- uncount(judges, n)
+  # bind to simulation
+  simulation %<>% bind_cols(ids) %>% select(1001, 1:1000)
+  # summarize simulation to judge means
+  simulation %<>% group_by(case.judge) %>% summarize_all(mean) %>% select(-1)
+  # extract moment distributions from simulated and empirical datasets
+  simulation.mean <- simulation %>%
+    t() %>%
+    as_tibble(.name_repair = 'universal') %>%
+    summarize_all(mean) %>%
+    unlist() %>%
+    unname()
+  # extract moment distributions from simulated datasets
+  simulation.ci <- quantile(simulation.mean, probs = c(.05, .95))
+  # compute the 1,000 iqr for both distributions
+  simulation.iqr <- summarize_all(simulation, IQR) %>% unlist() %>% unname()
+  # return list with simulation moments
+  obj <- list(ci = simulation.ci, iqr = simulation.iqr, mean = simulation.mean)
+  # return iqr distribution
+  return(obj)
+}
 
-# compute the 1,000 iqr for both distributions
-age.simulation.iqr <- summarize_all(age.simulation.mean, IQR) %>%
-                      unlist() %>%
-                      unname()
-sct.simulation.iqr <- summarize_all(sct.simulation.mean, IQR) %>%
-                      unlist() %>%
-                      unname()
+# calculate moments for all five simulations
+s.politician.age <- calculateMoments(cases,       s.politician.age)
+s.politician.win <- calculateMoments(cases,       s.politician.win)
+s.claimant.win01 <- calculateMoments(cases,       s.claimant.win01)
+s.claimant.sex00 <- calculateMoments(casesRandom, s.claimant.sex00)
+s.claimant.win02 <- calculateMoments(casesRandom, s.claimant.win02)
 
-# narrow down dataset to age and sct outcome variables
-empirical.moments <- tjspAnalysis %>%
-  group_by(case.judge) %>%
-  select(candidate.age, sct.favorable)
+# calculate moments for two simulations of defendant outcomes
+s.defendant.win01 <- calculateMoments(cases,       s.defendant.win01)
+s.defendant.win02 <- calculateMoments(casesRandom, s.defendant.win02)
 
-# extract moment distributions from empirical dataset (age)
-age.empirical.iqr <- empirical.moments %>%
-  group_by(case.judge) %>%
-  summarize_all(mean) %>%
-  summarize_all(IQR) %>%
-  {unlist(.[, 2])} %>%
-  unname()
-age.empirical.mean <- empirical.moments %>%
-  group_by(case.judge) %>%
-  summarize_all(mean) %>%
-  select(2) %>%
-  unlist() %>%
-  mean()
+# 4. calculate moments for empirical distribution
+calculateEmpiricalMoments <- function(dataset, variables){
+  # narrow down dataset to age and sct outcome variables
+  dataset %<>% group_by(case.judge) %>% select(case.judge, variables)
+  # extract moment distributions from empirical dataset (age)
+  empirical.iqr <- dataset %>%
+    select(case.judge, variables) %>%
+    group_by(case.judge) %>%
+    summarize_all(mean) %>%
+    summarize_all(IQR) %>%
+    select(-case.judge) %>%
+    unlist()
+  # extract moment distributions from empirical dataset (sct favorable)
+  empirical.mean <- dataset %>%
+    select(case.judge, variables) %>%
+    group_by(case.judge) %>%
+    summarize_all(mean) %>%
+    select(-case.judge) %>%
+    lapply(mean) %>%
+    unlist()
+  # return call
+  return(list(iqr = empirical.iqr, mean = empirical.mean))
+}
 
-# extract moment distributions from empirical dataset (sct favorable)
-sct.empirical.iqr <- empirical.moments %>%
-  group_by(case.judge) %>%
-  summarize_all(mean) %>%
-  summarize_all(IQR) %>%
-  {unlist(.[, 3])} %>%
-  unname()
-sct.empirical.mean <- empirical.moments %>%
-  group_by(case.judge) %>%
-  summarize_all(mean) %>%
-  select(3) %>%
-  unlist() %>%
-  mean()
+# create arguments for calculateEmpiricalMomentsfunction call
+a <- list(
+  tjspAnalysis,
+  c('candidate.age', 'case.claimant.win', 'case.defendant.win','sct.favorable')
+)
+b <- list(
+  filter(tjspAnalysis, str_detect(candidate.litigant.type, 'Defendant')),
+  'case.defendant.win'
+)
+c <- list(tjspAnalysisRandom, c('claimant.win', 'claimant.sex','defendant.win'))
 
-# manually try out quantiles for age
-iqr.significant <- quantile(age.simulation.iqr, probs = c(.05))
-age.iqr.signif  <- quantile(age.simulation.iqr, probs = c(.0649002)) %>%
-                   names() %>%
-                   str_remove('\\%$') %>%
-                   {as.numeric(.) / 100} %>%
-                   round(digits = 3) %>%
-                   {str_remove(as.character(.), '^0{1}')}
+# calculate moments for all five simulations
+empirical.politicians <- do.call(calculateEmpiricalMoments, a)
+empirical.pdefendants <- do.call(calculateEmpiricalMoments, b)
+empirical.randomcases <- do.call(calculateEmpiricalMoments, c)
 
-# manually try out quantiles for age
-iqr.significant <- quantile(sct.simulation.iqr, probs = c(.05))
-sct.iqr.signif  <- quantile(sct.simulation.iqr, probs = c(.0031)) %>%
-                   names() %>%
-                   str_remove('\\%$') %>%
-                   {as.numeric(.) / 100} %>%
-                   round(digits = 3) %>%
-                   {str_remove(as.character(.), '^0{1}')}
+# 5. create function to plot iqr and mean graphs
+graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
+  save = FALSE, name = NULL) {
+  # initiate plot object
+  p <- ggplot() +
+    geom_histogram(
+      aes(x = x, fill = 'grey79'), bins = bins, alpha = .5, color = 'black'
+    )
+  # define graphical parameters for y
+  y_min  <- 0
+  y_max  <- max(ggplot_build(p)$data[[1]]['y']) + 10
+  y_incr <- round((y_max - y_min) / 10, 0)
+  y_col  <- y_max
+  # define graphical parameters for x
+  x_max  <- max(ggplot_build(p)$data[[1]]['x'])
+  x_min  <- min(ggplot_build(p)$data[[1]]['x'])
+  x_incr <- round((x_max - x_min) / 5, 2)
+  # define label parameters
+  signif  <- quantile(x, probs = .05)
+  pvalue  <- ecdf(x)
+  x_value <- pvalue(y)
+  label   <- paste0('p-value = ', round(x_value, 3))
+  # finish graph
+  p <- p +
+    scale_x_continuous(breaks = round(seq(x_min, x_max, x_incr), 1)) +
+    scale_y_continuous(breaks = round(seq(y_min, y_max, y_incr), 1)) +
+    geom_col(
+      aes(x = y, y = y_col, fill = 'grey25'), color = 'black', width = width
+    ) +
+    geom_text(
+      aes(y = y_col, x = y), label = label, family = 'LM Roman 10',
+      position = position_nudge(y = y_incr / 2)
+    ) +
+    scale_fill_manual(
+      name = element_blank(), values = c('grey25', 'grey79'),
+      labels = paste0(c('Empirical ', 'Simulated '), legend)
+    ) +
+    labs(y = 'Density', x = paste0('Simulated ', legend)) +
+    theme_bw() +
+    theme(
+      axis.title = element_text(size = 10),
+      axis.title.y = element_text(margin = margin(r = 12)),
+      axis.title.x = element_blank(),
+      axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+      axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+      text = element_text(family = 'LM Roman 10'),
+      panel.border = element_rect(color = 'black', size = 1),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      panel.grid.major.y = element_line(color = 'grey79'),
+      legend.position = 'bottom'
+    )
+  # return plot
+  return(p)
+  # save plot if requested
+  if (save == TRUE & !is.null(name)) {
+    ggsave(
+      paste0(name, '.pdf'), device = cairo_pdf, path = 'plots', dpi = 100,
+      width = 7, height = 5
+    )
+  }
+}
 
-### produce random assignment graphs for age variable
-# build mean plot
-ggplot() +
-  geom_histogram(aes(x = age.simulation.mean.distribution),
-    bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
-  scale_x_continuous(breaks = seq(15, 75, 5)) +
-  scale_y_continuous(breaks = seq(0, 80, 10)) +
-  geom_segment(
-    aes(x = age.ci[1], xend = age.ci[1], y = -3, yend = 85), size = 1) +
-  geom_segment(
-    aes(x = age.ci[2], xend = age.ci[2], y = -3, yend = 85), size = 1) +
-  labs(y = 'Density', x = 'Simulated Mean of Candidate Age') +
-  theme_bw() +
-  theme(axis.title = element_text(size = 10),
-        axis.title.y = element_text(margin = margin(r = 12)),
-        axis.title.x = element_text(margin = margin(t = 12)),
-        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        text = element_text(family = 'LM Roman 10'),
-        panel.border = element_rect(color = 'black', size = 1),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(color = 'grey79')
-  )
+# produce plots for comparison of politician wins
+graphDistr(s.politician.age$iqr,empirical.politicians$iqr['candidate.age'])
+graphDistr(s.politician.win$iqr,empirical.politicians$iqr['sct.favorable'],.007)
+graphDistr(s.claimant.sex00$iqr,empirical.randomcases$iqr['claimant.sex'], .004)
+graphDistr(s.claimant.win02$iqr,empirical.randomcases$iqr['claimant.win'], .004)
 
-# # save plot
-# ggsave('age-mean.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
-#        width = 7, height = 5)
+# produce plots for showing where result is coming from
+graphDistr(
+  s.defendant.win01$iqr, empirical.pdefendants$iqr['case.defendant.win'], .004
+)
+graphDistr(
+  s.defendant.win02$iqr, empirical.randomcases$iqr['defendant.win'], .004
+)
 
-# build iqr plot
-ggplot() +
-  geom_histogram(aes(x = age.simulation.iqr, fill = 'grey79'),
-    bins = 25, alpha = .5, color = 'black') +
-  scale_x_continuous(breaks = seq(5, 15, .5)) +
-  scale_y_continuous(breaks = seq(0, 135, 15)) +
-  geom_col(aes(x = age.empirical.iqr, y = 129, fill = 'grey25'), color = 'black',
-    width = .05) +
-  geom_text(aes(y = 129, x = age.empirical.iqr), label = 'p-value > .05',
-    family = 'LM Roman 10', position = position_nudge(x = .35, y = .65)) +
-  scale_fill_manual(name = element_blank(), values = c('grey25', 'grey79'),
-    labels = c('Empirical IQR', 'Simulated IQR')) +
-  labs(y = 'Density', x = 'Simulated IQR') +
-  theme_bw() +
-  theme(axis.title = element_text(size = 10),
-        axis.title.y = element_text(margin = margin(r = 12)),
-        axis.title.x = element_blank(),
-        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        text = element_text(family = 'LM Roman 10'),
-        panel.border = element_rect(color = 'black', size = 1),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(color = 'grey79'),
-        legend.position = 'bottom'
-  )
-
-# # save plot
-# ggsave('age-iqr.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
-#        width = 7, height = 5)
-
-### produce random outcome graphs for sct.favorable variable
-# build mean plot
-ggplot() +
-  geom_histogram(aes(x = sct.simulation.mean.distribution),
-    bins = 25, fill = 'grey63', alpha = .5, color = 'black') +
-  scale_x_continuous(breaks = seq(0, 1, .1)) +
-  scale_y_continuous(breaks = seq(0, 55, 5)) +
-  geom_segment(
-    aes(x = sct.ci[1], xend = sct.ci[1], y = -1, yend = 55), size = 1) +
-  geom_segment(
-    aes(x = sct.ci[2], xend = sct.ci[2], y = -1, yend = 55), size = 1) +
-  labs(y = 'Density', x = 'Simulated Mean of Favorable Outcome') +
-  theme_bw() +
-  theme(axis.title = element_text(size = 10),
-        axis.title.y = element_text(margin = margin(r = 12)),
-        axis.title.x = element_text(margin = margin(t = 12)),
-        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        text = element_text(family = 'LM Roman 10'),
-        panel.border = element_rect(color = 'black', size = 1),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(color = 'grey79')
-  )
-
-# # save plot
-# ggsave('sct-mean.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
-#        width = 7, height = 5)
-
-# build iqr plot
-ggplot() +
-  geom_histogram(aes(x = sct.simulation.iqr, fill = 'grey79'),
-    bins = 25, alpha = .5, color = 'black') +
-  scale_x_continuous(breaks = seq(0, 1, .05)) +
-  scale_y_continuous(breaks = seq(0, 120, 15)) +
-  geom_col(aes(x = sct.empirical.iqr, y = 120, fill = 'grey25'),
-    color = 'black', width = .007) +
-  geom_text(aes(y = 120, x = sct.empirical.iqr), label = 'p-value < .01',
-    family = 'LM Roman 10', position = position_nudge(x = .035, y = 4)) +
-  scale_fill_manual(name = element_blank(), values = c('grey25', 'grey79'),
-    labels = c('Empirical IQR', 'Simulated IQR')) +
-  labs(y = 'Density', x = 'Simulated IQR') +
-  theme_bw() +
-  theme(axis.title = element_text(size = 10),
-        axis.title.y = element_text(margin = margin(r = 12)),
-        axis.title.x = element_blank(),
-        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        text = element_text(family = 'LM Roman 10'),
-        panel.border = element_rect(color = 'black', size = 1),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(color = 'grey79'),
-        legend.position = 'bottom'
-  )
-
-# # save plot
-# ggsave('sct-iqr.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
-#        width = 7, height = 5)
 
 ### regression discontinuity analysis
 # create vector of election dates
