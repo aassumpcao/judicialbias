@@ -51,5 +51,6 @@ unused/
 *.html
 *.tex
 scripts/06_tjsp_predictiveAA.R
+scripts/06_tjsp_analysis_JULIO.R
 sftp-config.json
 html.zip

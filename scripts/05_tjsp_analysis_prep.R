@@ -2,7 +2,7 @@
 # this script prepares all data for analysis
 # author: andre assumpcao
 # by andre.assumpcao@gmail.com
-
+rm(list = ls())
 ### import statements
 # import packages
 library(tidyverse)
@@ -13,14 +13,45 @@ load('data/campaign.Rda')
 load('data/tjspJudges.Rda')
 load('data/tjspMun.Rda')
 load('data/tjspSentences.Rda')
-load('data/sections.Rda')
-load('data/results.Rda')
-load('data/vacancies.Rda')
 load('data/tseCandidates.Rda')
+load('data/sections.Rda')
 tjspSentencesRandom <- read_csv('data/tjspSentencesRandom.csv')
 tjspLitigantsRandom <- read_csv('data/tjspLitigantsRandom.csv')
 
 ### wrangle datasets
+# organize sections dataset so that we know who's been elected
+sections %<>%
+  group_by(ANO_ELEICAO, SIGLA_UE, NUM_TURNO, CODIGO_CARGO) %>%
+  mutate(voto.total = sum(voto.secao)) %>%
+  arrange(SIGLA_UE, ANO_ELEICAO, CODIGO_CARGO, desc(voto.secao)) %>%
+  mutate(
+    candidate.elect = ifelse(CODIGO_CARGO == 11 & row_number() == 1, 1, 0),
+    candidate.rank = ifelse(CODIGO_CARGO == 13, row_number(), 1)
+  ) %>%
+  ungroup() %>%
+  mutate_all(as.character)
+
+# create key to join tse data
+joinkey1 <- c(
+  'election.year' = 'ANO_ELEICAO', 'election.ID' = 'SIGLA_UE',
+  'election.stage' = 'NUM_TURNO', 'office.ID' = 'CODIGO_CARGO',
+  'candidate.number' = 'NUM_VOTAVEL'
+)
+
+# join tse data on itself
+tseCandidates %<>%
+  select(-matches('votes$|^voto')) %>%
+  left_join(sections, joinkey1) %>%
+  mutate(candidate.elect = ifelse(
+    office.ID == 13 & candidate.rank >= office.vacancies, 1, candidate.elect
+  ))
+
+# join onto tjsp
+tjspAnalysis <- tjspSentences %>%
+  left_join(tseCandidates, c('candidateID.x' = 'scraper.id')) %>%
+  filter(!is.na(claimant.win)) %>%
+  filter(class == 'Procedimento do Juizado Especial Cível')
+
 # narrrow random litigants dataset to main litigant only
 tjspFinalRandom <- tjspLitigantsRandom %>%
   group_by(id) %>%
@@ -61,13 +92,12 @@ campaign %<>%
   mutate(office.ID = as.character(ifelse(DS_CARGO == 'Vereador', 13, 11))) %>%
   rename(election.year = ANO_ELEICAO, election.ID = SG_UE) %>%
   rename(candidate.number = NR_CANDIDATO) %>%
-  inner_join(tjspAnalysis, joinkey4) %>%
+  inner_join(electionMatch, joinkey4) %>%
   group_by(election.year, candidate.ssn) %>%
   summarize(x = sum(TOTAL_DESPESA))
 
 tjspAnalysis %<>%
   left_join(campaign, c('election.year', 'candidate.ssn')) %>%
-  select(-election.year) %>%
   group_by(election.ID) %>%
   mutate(x = ifelse(is.na(x), mean(x, na.rm = TRUE), x)) %>%
   group_by(office.ID) %>%

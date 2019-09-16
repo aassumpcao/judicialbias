@@ -1,58 +1,37 @@
-rm(list = ls())
+### judicial favoritism of politicians
+#  this script executes the prediction algorithms on the sct data
+# andre assumpcao and julio trecenti
+# email: andre.assumpcao@gmail.com
+# email: julio.trecenti@gmail.com
+
+### data and library calls
+# import libraries
 library(tidyverse)
 library(patchwork)
 library(recipes)
 library(iml)
 library(keras)
 
-# seed
+# load data
+load('data/tjspElected.Rda')
+
+# set seed for prediction exercises
 s <- 19910401
 set.seed(s)
 tensorflow::use_session_with_seed(s)
 
-# data -------------------------------------------------------------------------
-load('data/tjspFinal.Rda')
+# wrangle data for regressions
+loc <- locale(grouping_mark = '.', decimal_mark = ',')
 
-# split dataset to elected-candidates only and create running var
-tjspElected <- tjspAnalysis %>%
-  mutate_at(vars(candidate.votes, total.votes, election.votes), as.integer) %>%
-  mutate(election.share = ifelse(
-    office.ID == 11,
-    (candidate.votes / total.votes) - .5,
-    (candidate.votes / total.votes) - (election.votes / total.votes)
-  ))
-
-# prepare data to regression models
-loc <- locale(grouping_mark = ".", decimal_mark = ",")
+# narrow down to numeric variables which can be used for regression analysis
 tjsp_data <- tjspElected %>%
-  mutate(sct.favorable = case_when(
-    case.claimant.win == 1 & str_detect(candidate.litigant.type, 'Claimant') ~ 1,
-    case.claimant.win == 0 & str_detect(candidate.litigant.type, 'Defendant') ~ 1,
-    TRUE ~ 0
-  )) %>%
   transmute(
-    sct.favorable = factor(sct.favorable),
-    case.claim = parse_number(case.claim, locale = loc),
-    judge.pay = as.numeric(judge.pay),
-    judge.tenure = as.numeric(judge.tenure),
-    case.claim,
-    election.year,
-    election.share,
-    judge.pay,
-    judge.gender,
-    judge.tenure,
-    election.year,
-    election.year,
-    office.ID,
-    candidate.litigant.type,
-    candidate.age = as.numeric(candidate.age),
-    candidate.gender,
-    candidate.education,
-    candidate.maritalstatus,
-    candidate.experience,
-    candidate.litigant.type,
-    candidate.elected,
-    candidacy.situation,
+    sct.favorable = factor(sct.favorable), case.claim,
+    judge.pay = as.numeric(judge.pay), judge.tenure = as.numeric(judge.tenure),
+    election.year, election.share, judge.gender, office.ID,
+    candidate.age = as.numeric(candidate.age), candidate.gender,
+    candidate.education, candidate.maritalstatus, candidate.experience,
+    candidate.litigant.type, candidate.elect, candidacy.situation,
     party.number = fct_lump(party.number, 10)
   ) %>%
   filter_all(all_vars(!is.na(.))) %>%
@@ -61,65 +40,60 @@ tjsp_data <- tjspElected %>%
 # separate train and test data
 N <- nrow(tjsp_data)
 id_train <- sample(seq_len(N), ceiling(N * .8))
-tjsp_train <- tjsp_data[id_train, ]
-tjsp_test <- tjsp_data[-id_train, ]
+tjsp_train <- tjsp_data[ id_train, ]
+tjsp_test  <- tjsp_data[-id_train, ]
 
-# recipe to prepare data
+# create recipe to prepare data for most models
 rec_obj <- recipe(sct.favorable ~ ., data = tjsp_train) %>%
   step_dummy(all_predictors(), -all_numeric())
 
-# needed to create new recipe for dnn model
-# if we center and scale variables to the RF model, the PDP plots will be
-# harder to understand
+# create recipe for dnn model. we need to center and scale them, a problem for
+# the random forest model
 rec_dnn <- rec_obj %>%
   step_center(all_predictors()) %>%
   step_scale(all_predictors())
 
-trained_rec <- prep(rec_obj, training = tjsp_train)
+# create objects taking in training results
+trained_rec     <- prep(rec_obj, training = tjsp_train)
 trained_rec_dnn <- prep(rec_dnn, training = tjsp_train)
 
-# prepare data
-train_data <- bake(trained_rec, new_data = tjsp_train)
-test_data  <- bake(trained_rec, new_data = tjsp_test)
+# prepare data for analysis
+train_data     <- bake(trained_rec,     new_data = tjsp_train)
+test_data      <- bake(trained_rec,     new_data = tjsp_test)
 train_data_dnn <- bake(trained_rec_dnn, new_data = tjsp_train)
 test_data_dnn  <- bake(trained_rec_dnn, new_data = tjsp_test)
 
-
-# models -----------------------------------------------------------------------
+### train models
 # model 1: random forest
 rf_model <- randomForest::randomForest(
-  sct.favorable ~ .,
-  ntree = 1000, mtry = 10,
-  data = train_data
+  sct.favorable ~ ., ntree = 1000, mtry = 10, data = train_data
 )
 
 # model 2: logistic lasso
 caret_glm_model <- caret::train(
-  sct.favorable ~ .,
-  method = "glmnet",
-  data = train_data
+  sct.favorable ~ ., method = 'glmnet', data = train_data
 )
 
-# model 2: deep neural network
+# model 3: deep neural network
 dnn_model <- keras_model_sequential()
-dnn_model <- dnn_model %>%
-  layer_dense(100, input_shape = ncol(train_data) - 1) %>%
+dnn_model %<>%
+  layer_dense(150, input_shape = ncol(train_data) - 1) %>%
   layer_activation_leaky_relu() %>%
   layer_dense(100) %>%
   layer_activation_leaky_relu() %>%
-  layer_dense(50) %>%
+  layer_dense(100) %>%
   layer_dropout(.1) %>%
   layer_activation_leaky_relu() %>%
-  layer_dense(1, activation = "sigmoid")
+  layer_dense(1, activation = 'sigmoid')
 
 dnn_model %>%
   compile(
     loss = loss_binary_crossentropy,
     optimizer = optimizer_adam(),
-    metrics = "accuracy"
+    metrics = 'accuracy'
   )
 
-dnn_model %>%
+dnn_fit <- dnn_model %>%
   fit(
     x = as.matrix(train_data_dnn[,-1]),
     y = as.numeric(as.character(train_data_dnn$sct.favorable)),
@@ -128,113 +102,142 @@ dnn_model %>%
 
 # model 4: extreme gradient boosting
 caret_xgb_model <- caret::train(
-  sct.favorable ~ .,
-  method = "xgbTree",
-  data = train_data
+  sct.favorable ~ ., method = 'xgbTree', data = train_data
 )
 
-# predictions
-predictions <- tibble::tibble(
-  pred_rf = predict(rf_model, test_data),
-  # pred_gbm = predict(caret_xgb_model, test_data),
-  # pred_lasso = predict(caret_glm_model, test_data),
-  # pred_dnn = as.factor(predict_classes(dnn_model, as.matrix(test_data_dnn[,-1])))
-) %>% bind_cols(select(tjsp_test, sct.favorable))
+# execute predictions
+predictions <- tibble(
+  rf    = predict(rf_model, test_data),
+  gbm   = predict(caret_xgb_model, test_data),
+  lasso = predict(caret_glm_model, test_data),
+  dnn   = as.factor(predict_classes(dnn_model, as.matrix(test_data_dnn[,-1])))
+) %>%
+bind_cols(select(tjsp_test, sct.favorable))
 
-# accuracy / kappa table
+# construct accuracy / kappa table
 tab_acc <- predictions %>%
   gather(model, pred, -sct.favorable) %>%
   group_by(model) %>%
   summarise(accuracy = mean(pred == sct.favorable), acc = accuracy) %>%
   arrange(desc(accuracy)) %>%
-  mutate(kappa = (accuracy - mean(tjsp_data$sct.favorable == 1)) / mean(tjsp_data$sct.favorable == 1)) %>%
+  mutate(
+    kappa = (accuracy - mean(tjsp_data$sct.favorable == 1)) /
+            mean(tjsp_data$sct.favorable == 1)
+  ) %>%
   mutate_at(vars(accuracy, kappa), scales::percent, .01)
 
-# output -----------------------------------------------------------------------
+# rename models in accuracy table
+tab_latex <- mutate(tab_acc,
+  model = c('Random Forest', 'Extreme Gradient Boosting', 'Lasso',
+            'Deep Neural Networks'
+  ))
 
-# output for latex
-tab_latex <- tab_acc %>%
-  select(-acc)
+# produce mean decrease in gini object
+model_information <- list(rf_model, acc = tab_acc$acc[1])
+gini <- model_information[[1]] %>%
+  randomForest::importance() %>%
+  as.data.frame() %>%
+  rownames_to_column() %>%
+  as_tibble() %>%
+  mutate(rowname = str_extract(rowname, '[^(]+')) %>%
+  mutate(
+    rowname = fct_reorder(rowname, MeanDecreaseGini),
+    acc = model_information[[2]], cor = 'gray20'
+  )
 
-# variable importance plot functions
-d_graf_imp <- function(m_list, cor) {
-  m <- m_list[[1]]
-  acc <- m_list[[2]]
-  d_graf <- m %>%
-    randomForest::importance() %>%
-    as.data.frame() %>%
-    tibble::rownames_to_column() %>%
-    tibble::as_tibble() %>%
-    dplyr::mutate(rowname = stringr::str_extract(rowname, "[^(]+")) %>%
-    dplyr::mutate(rowname = forcats::fct_reorder(rowname, MeanDecreaseGini),
-                  acc = acc, cor = cor)
-  d_graf
-}
-graf_imp <- function(d_graf) {
-  d_graf %>%
-    ggplot(aes(x = MeanDecreaseGini, y = rowname)) +
-    geom_segment(aes(xend = 0, yend = rowname), size = 1, colour = d_graf$cor[[1]]) +
-    geom_point(size = 2, colour = d_graf$cor[[1]]) +
-    theme_minimal() +
-    labs(x = "Mean decrease Gini",
-         y = "",
-         title = "Random Forest Model",
-         subtitle = paste(scales::percent(d_graf$acc[[1]]), "Accuracy"))
-}
+# save to file just in case
+saveRDS(gini, 'data/MeanDecreaseGini.Rds')
 
-# variable importance plot
-plot_rf <- rf_model %>%
-  list(acc = tab_acc$acc[1]) %>%
-  d_graf_imp("gray20") %>%
-  graf_imp() +
-  theme(axis.title = element_text(size = 10),
-        axis.title.y = element_text(margin = margin(r = 12)),
-        axis.title.x = element_text(margin = margin(t = 12)),
-        axis.text.y = element_text(size = 10, lineheight = 1.1),
-        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        text = element_text(family = 'LM Roman 10'),
-        # panel.border = element_rect(color = 'black', size = 1),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(color = 'grey79'))
+# load results
+gini %<>%
+  arrange(desc(MeanDecreaseGini)) %>%
+  slice(1:6) %>%
+  mutate_at(1, as.character)
 
+# insert last row to cover eveything else
+gini[7,] <- c('All Others', 50, rep(NA_character_, 2))
+gini %<>% mutate_at(2, as.integer)
+
+# create labels
+labs <- c(
+  'Judge Tenure', 'Case Claim', 'Judge Pay', 'Politician is Defendant',
+  'Election Share', 'Candidate Age', 'All Others'
+)
+
+# produce mean decrease in gini plot
+ggplot(data = gini) +
+  geom_point(aes(MeanDecreaseGini, 1:7), size = 2) +
+  geom_segment(
+    aes(x = 0, xend = MeanDecreaseGini, y = 1:7, yend = 1:7), size = 1
+  ) +
+  geom_segment(
+    aes(x = 0, xend = 300, y = 5.5, yend = 5.5), linetype = 'dashed',
+    color = 'gray79'
+  ) +
+  geom_text(
+    aes(MeanDecreaseGini, 1:7), label = c(unlist(gini[1:6, 2]), '< 50'),
+    nudge_x = 20, family = 'LM Roman 10'
+  ) +
+  scale_y_reverse(name = NULL, breaks = 1:7, labels = labs) +
+  theme_bw() +
+  xlab('Mean Decrease in Gini') +
+  theme(
+    axis.title = element_text(size = 10),
+    axis.title.y = element_text(margin = margin(r = 12)),
+    axis.title.x = element_text(margin = margin(t = 12)),
+    axis.text.y = element_text(size = 10, lineheight = 1, face = 'bold'),
+    axis.text.x = element_text(size = 10, lineheight = 1, face = 'bold'),
+    text = element_text(family = 'LM Roman 10'),
+    panel.border = element_rect(color = 'black', size = 1),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
+
+# save plot
+ggsave(
+  'rf-varimp.pdf', device = cairo_pdf, path = 'plots', dpi = 100, width = 7,
+  height = 5
+)
+
+# create list of variables to loop over in map2 function
 # partial dependency plot (PDP)
-X <- dplyr::select(test_data, -sct.favorable)
-predictor <- Predictor$new(rf_model, data = X,
-                           y = test_data$sct.favorable,
-                           class = 2)
-vars <- c("judge.tenure", "case.claim", "judge.pay", "election.share")
-labs <- c("Judge Tenure (days)",
-          "Case claim (Brazilian Reais)",
-          "Judge Pay (Brazilian Reais)",
-          "Election Share")
+X <- select(test_data, -sct.favorable)
+predictor <- Predictor$new(
+  rf_model, data = X, y = test_data$sct.favorable, class = 2
+)
+vars <- c(
+  'judge.tenure', 'case.claim', 'judge.pay', 'candidate.litigant.type_Defendant'
+)
 
-
-pdp <- map2(vars, labs, ~{
-  ale <- FeatureEffect$new(predictor, feature = .x, method = "pdp")
-  ale$plot() +
-    scale_y_continuous(limits = c(.65, .83)) +
-    labs(x = .y, y = "Win Probability") +
+# execute function
+pdp_plots <- map2(vars, labs[1:4], function(.x, .y){
+  FeatureEffect$new(
+    predictor, feature = .x, method = 'pdp'
+  )$plot() +
+    labs(x = .y) +
+    scale_y_continuous(limits = c(.1, 1)) +
     theme_bw() +
-    theme(axis.title = element_text(size = 10),
-          axis.title.y = element_text(margin = margin(r = 12)),
-          axis.title.x = element_text(margin = margin(t = 12)),
-          axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-          axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-          text = element_text(family = 'LM Roman 10'),
-          panel.border = element_rect(color = 'black', size = 1),
-          panel.grid.major.x = element_blank(),
-          panel.grid.minor.x = element_blank(),
-          panel.grid.major.y = element_line(color = 'grey79'))
+    theme(
+      axis.title = element_text(size = 10),
+      axis.title.y = element_blank(),
+      axis.title.x = element_text(margin = margin(t = 12)),
+      axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+      axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+      text = element_text(family = 'LM Roman 10'),
+      panel.border = element_rect(color = 'black', size = 1),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      panel.grid.major.y = element_line(color = 'grey79')
+    )
 })
 
-plot_pdp <- reduce(pdp, `+`)
+# arrange them in the same scalse
+p <- gridExtra::grid.arrange(
+  pdp_plots[[1]], pdp_plots[[2]], pdp_plots[[3]], pdp_plots[[4]]
+)
 
-
-out <- list(tab_latex, plot_rf, plot_pdp)
-readr::write_rds(out, "plots/out.rds", compress = "xz")
-# export -----------------------------------------------------------------------
-
-out <- readr::read_rds("plots/out.rds")
-ggsave("plots/rf-varimp.pdf", out[[2]], device = cairo_pdf, width = 10, height = 6.3)
-ggsave("plots/rf-pdp.pdf", out[[3]], device = cairo_pdf, width = 8, height = 6)
+# save to disk
+ggsave(
+  'rf-pdp.pdf', plot = p, device = cairo_pdf, path = 'plots', dpi = 100,
+  width = 7, height = 5
+)

@@ -20,6 +20,27 @@ library(xtable)
 # load data
 load('data/tjspAnalysis.Rda')
 load('data/tjspAnalysisRandom.Rda')
+load('data/tjspSimulation1.Rda')
+load('data/tjspSimulation2.Rda')
+load('data/tjspSimulation1Random.Rda')
+load('data/tjspSimulation2Random.Rda')
+load('data/tjspSimulation1ClaimantWin.Rda')
+load('data/tjspSimulation1DefendantWin.Rda')
+load('data/tjspSimulation2DefendantWin.Rda')
+
+# rename objects
+# the distribution of covariates per judge for politicians and random cases
+s.politician.age <- simulated.mean
+s.politician.win <- outcome.mean
+s.claimant.win01 <- outcome.mean.claimant.win
+
+# the distribution of outcomes per judge (pro-politician ruling and claimant
+# win in cases involving politicians and random cases)
+s.claimant.sex00 <- simulated.mean.random
+s.claimant.win02 <- outcome.mean.random
+
+# remove old objects
+rm(list = objects(pattern = '(simulated|outcome\\.)'))
 
 ### define variable labels
 # outcome label
@@ -62,7 +83,6 @@ tjspAnalysis %<>%
   mutate(judge.gender = as.integer(ifelse(judge.gender == 'Female', 0, 1))) %>%
   mutate(
     candidate.gender = as.integer(ifelse(candidate.gender == 'FEMININO', 0, 1)),
-    candidate.elect = ifelse(total.votes > election.votes, 1, 0)
   )
 
 # do the same for random cases
@@ -119,7 +139,8 @@ tjspAnalysis %<>%
 stargazer(
 
   # summmary table
-  tjspAnalysis[, c('case.duration', 'case.claim', 'sct.favorable')] %>%
+  tjspAnalysis %>%
+    select(case.duration, case.claim, sct.favorable) %>%
     as.data.frame(),
 
   # table cosmetics
@@ -193,7 +214,7 @@ stargazer(
       candidate.age = first(candidate.age),
       candidate.gender = first(candidate.gender),
       candidate.experience = max(candidate.experience),
-      candidate.elect = mean(candidate.elect),
+      candidate.elect = mean(as.integer(candidate.elect)),
       candidate.expenditure = mean(candidate.expenditure)
     ) %>%
     as.data.frame(),
@@ -313,30 +334,6 @@ casesRandom <- countJudges(tjspAnalysisRandom)
 # save(simulated.mean,      file = 'data/tjspSimulation1.Rda')
 # save(s.defendant.win02,   file = 'data/tjspSimulation2DefendantWin.Rda')
 
-### load datasets and pick up where we left off
-# load data
-load('data/tjspSimulation1.Rda')
-load('data/tjspSimulation2.Rda')
-load('data/tjspSimulation1Random.Rda')
-load('data/tjspSimulation2Random.Rda')
-load('data/tjspSimulation1ClaimantWin.Rda')
-load('data/tjspSimulation1DefendantWin.Rda')
-load('data/tjspSimulation2DefendantWin.Rda')
-
-# rename objects
-# the distribution of covariates per judge for politicians and random cases
-s.politician.age <- simulated.mean
-s.politician.win <- outcome.mean
-s.claimant.win01 <- outcome.mean.claimant.win
-
-# the distribution of outcomes per judge (pro-politician ruling and claimant
-# win in cases involving politicians and random cases)
-s.claimant.sex00 <- simulated.mean.random
-s.claimant.win02 <- outcome.mean.random
-
-# remove old objects
-rm(list = objects(pattern = '(simulated|outcome\\.)'))
-
 # 3. calculate moments of simulated distribution and return them in a list
 calculateMoments <- function(judges, simulation){
   # uncount variables
@@ -400,7 +397,7 @@ calculateEmpiricalMoments <- function(dataset, variables){
 # create arguments for calculateEmpiricalMomentsfunction call
 a <- list(
   tjspAnalysis,
-  c('candidate.age', 'case.claimant.win', 'case.defendant.win','sct.favorable')
+  c('candidate.age', 'case.claimant.win', 'case.defendant.win', 'sct.favorable')
 )
 b <- list(
   filter(tjspAnalysis, str_detect(candidate.litigant.type, 'Defendant')),
@@ -465,31 +462,47 @@ graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
       panel.grid.major.y = element_line(color = 'grey79'),
       legend.position = 'bottom'
     )
-  # return plot
-  return(p)
   # save plot if requested
   if (save == TRUE & !is.null(name)) {
     ggsave(
-      paste0(name, '.pdf'), device = cairo_pdf, path = 'plots', dpi = 100,
-      width = 7, height = 5
+      filename = paste0(name, '.pdf'), plot = p, device = cairo_pdf,
+      path = 'plots', dpi = 100, width = 7, height = 5
     )
   }
+  # return plot
+  return(p)
 }
 
 # produce plots for comparison of politician wins
-graphDistr(s.politician.age$iqr,empirical.politicians$iqr['candidate.age'])
-graphDistr(s.politician.win$iqr,empirical.politicians$iqr['sct.favorable'],.007)
-graphDistr(s.claimant.sex00$iqr,empirical.randomcases$iqr['claimant.sex'], .004)
-graphDistr(s.claimant.win02$iqr,empirical.randomcases$iqr['claimant.win'], .004)
-
-# produce plots for showing where result is coming from
 graphDistr(
-  s.defendant.win01$iqr, empirical.pdefendants$iqr['case.defendant.win'], .004
+  s.politician.age$iqr,
+  empirical.politicians$iqr['candidate.age'],
+  # save = TRUE, name = 'age-iqr-politicians'
 )
 graphDistr(
-  s.defendant.win02$iqr, empirical.randomcases$iqr['defendant.win'], .004
+  s.politician.win$iqr,
+  empirical.politicians$iqr['sct.favorable'],
+   width = .007, # save = TRUE, name = 'win-iqr-politicians'
 )
-
+graphDistr(
+  s.claimant.sex00$iqr,
+  empirical.randomcases$iqr['claimant.sex'],
+   width = .004, # save = TRUE, name = 'sex-iqr-randomcases'
+)
+graphDistr(
+  s.claimant.win02$iqr,
+  empirical.randomcases$iqr['claimant.win'],
+   width = .004, # save = TRUE, name = 'win-iqr-randomcases'
+)
+# produce plots for showing the result is coming from defendants
+graphDistr(
+  s.defendant.win01$iqr, empirical.pdefendants$iqr['case.defendant.win'],
+   width = .004, # save = TRUE, name = 'win-iqr-politicians-defendants'
+)
+graphDistr(
+  s.defendant.win02$iqr, empirical.randomcases$iqr['defendant.win'],
+   width = .004, # save = TRUE, name = 'win-iqr-random-defendants'
+)
 
 ### regression discontinuity analysis
 # create vector of election dates
@@ -505,12 +518,15 @@ tjspAnalysis$rd.date <- tjspAnalysis %>%
 
 # split dataset to elected-candidates only and create running var
 tjspElected <- tjspAnalysis %>%
-  mutate_at(vars(candidate.votes, total.votes, election.votes), as.integer) %>%
-  mutate(election.share = ifelse(
-    office.ID == 11,
-    (candidate.votes / total.votes) - .5,
-    (candidate.votes / total.votes) - (election.votes / total.votes)
+  mutate_at(vars(voto.secao, voto.total, office.vacancies), as.integer) %>%
+  mutate(election.votes = voto.total / office.vacancies) %>%
+  mutate(election.share = ifelse(office.ID == 11,
+    (voto.secao / election.votes) - .5,
+    (voto.secao / election.votes) - (election.votes / election.votes)
   ))
+
+# save to disk
+save(tjspElected, file = 'data/tjspElected.Rda')
 
 # different bandwidths for which we want to test everything
 bws <- c(.40, .35, .30, .25, .20, .15, .10, .0842, .05, .01)
@@ -518,11 +534,15 @@ bws <- c(.40, .35, .30, .25, .20, .15, .10, .0842, .05, .01)
 # create dataset for rd regressions
 rdData <- filter(tjspElected, office.ID == 11 & case.lastupdate > rd.date) %>%
           mutate(treatment = ifelse(election.share > 0, 1, 0))
+rdData %<>% replace_na(list(
+  election.share = median(rdData$election.share, na.rm = TRUE),
+  treatment = median(rdData$treatment, na.rm = TRUE))
+)
 
 # run rd regressions for different bandwidths
 rdEstimates <- bws %>%
   lapply(function(x){
-    rddata %$%
+    rdData %$%
       rdrobust::rdrobust(y = sct.favorable, x = election.share, h = x) %>%
       {c(estimate = unname(.$Estimate[1, 1]), pvalue = .$pv[1, 1],
         n = sum(.$Nh), .$ci[1,], bws = .$bws[1,1]
@@ -539,35 +559,43 @@ ggplot(data = rdResults) +
   geom_point(aes(y = estimate, x = 1:10)) +
   geom_point(aes(y = unlist(rdResults[8,1]), x = 8), color = 'dodgerblue2') +
   geom_errorbar(
-    aes(ymax = `CI Upper`, ymin = `CI Lower`, x = 1:10), width = .5) +
+    aes(ymax = `CI Upper`, ymin = `CI Lower`, x = 1:10), width = .5
+  ) +
   geom_errorbar(
     aes(ymax = unlist(rdResults[8,4]), ymin = unlist(rdResults[8,5]), x = 8),
-    width = .5, color = 'dodgerblue2') +
+    width = .5, color = 'dodgerblue2'
+  ) +
   geom_text(aes(y = estimate, x = 1:10,
     label = format(round(estimate, 2), nsmall = 2)), family = 'LM Roman 10',
-    nudge_x = .3) +
+    nudge_x = .4, nudge_y = .03
+  ) +
   geom_hline(yintercept = 0, linetype = 'dashed', color = 'gray33') +
   scale_y_continuous(breaks = seq(-.25, .75, .125)) +
-  scale_x_continuous(breaks = 1:10, labels = round(rdResults$bws, 2) %>%
-    format(nsmall = 2) %>% paste0(' \n (n = ', rdResults$n, ')')) +
+  scale_x_continuous(
+    breaks = 1:10, labels = round(rdResults$bws, 2) %>%
+      format(nsmall = 2) %>% paste0(' \n (n = ', rdResults$n, ')')
+  ) +
   labs(y = 'Point Estimate', x = element_blank()) +
   theme_bw() +
-  theme(axis.title = element_text(size = 10),
-        axis.title.y = element_text(margin = margin(r = 12)),
-        axis.title.x = element_blank(),
-        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        text = element_text(family = 'LM Roman 10'),
-        panel.border = element_rect(color = 'black', size = 1),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_blank(),
-        legend.position = 'bottom'
+  theme(
+    axis.title = element_text(size = 10),
+    axis.title.y = element_text(margin = margin(r = 12)),
+    axis.title.x = element_blank(),
+    axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+    axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+    text = element_text(family = 'LM Roman 10'),
+    panel.border = element_rect(color = 'black', size = 1),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.position = 'bottom'
   )
 
 # save plot
-ggsave('rd-bws.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
-       width = 8, height = 5)
+ggsave(
+  'rd-bws.pdf', device = cairo_pdf, path = 'plots', dpi = 100, width = 7,
+  height = 5
+)
 
 # build point estimate graphs
 rdData$sct.predicted <- predict(
@@ -581,34 +609,41 @@ rdData$sct.predicted <- predict(
 ggplot(data = rdData) +
   stat_summary_bin(
     aes(election.share, sct.favorable, color = election.share > 0),
-    geom = 'point', bins = 30) +
-  geom_smooth(aes(election.share, sct.favorable, color = TRUE),
-    linetype = 'dashed', se = FALSE, size = .5) +
+    geom = 'point', bins = 30
+  ) +
+  geom_smooth(
+    aes(election.share, sct.favorable, color = TRUE), linetype = 'dashed',
+    se = FALSE, size = .5
+  ) +
   geom_smooth(aes(election.share, sct.predicted, color = election.share > 0)) +
   geom_vline(xintercept = 0, linetype = 'longdash') +
   scale_color_manual(
     name = 'Politician Condition:', breaks = c('FALSE','TRUE'),
     values = c('FALSE' = 'grey15', 'TRUE' = 'grey60'),
-    labels = c('Lost Election', 'Won Election')) +
+    labels = c('Lost Election', 'Won Election')
+  ) +
   labs(y = 'Pro-Politican Ruling', x = 'Vote Share Centered at 50 percent') +
   lims(y = c(NA, 1), x = c(-.2, .2)) +
   theme_bw() +
-  theme(axis.title = element_text(size = 10),
-        axis.title.y = element_text(margin = margin(r = 12)),
-        axis.title.x = element_text(margin = margin(t = 12)),
-        axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-        text = element_text(family = 'LM Roman 10'),
-        panel.border = element_rect(color = 'black', size = 1),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_blank(),
-        legend.position = 'top'
+  theme(
+    axis.title = element_text(size = 10),
+    axis.title.y = element_text(margin = margin(r = 12)),
+    axis.title.x = element_text(margin = margin(t = 12)),
+    axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+    axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+    text = element_text(family = 'LM Roman 10'),
+    panel.border = element_rect(color = 'black', size = 1),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.position = 'top'
   )
 
 # save plot
-ggsave('rd-plot.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
-       width = 7, height = 5)
+ggsave(
+  'rd-plot.pdf', device = cairo_pdf, path = 'plots', dpi = 100, width = 7,
+  height = 5
+)
 
 # remove everything for serial sourcing
 rm(list = ls())
