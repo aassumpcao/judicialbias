@@ -4,9 +4,6 @@
 # email: andre.assumpcao@gmail.com
 # email: julio.trecenti@gmail.com
 
-# for testing
-rm(list = ls())
-
 ### data and library calls
 # import libraries
 library(AER)
@@ -582,7 +579,7 @@ ggplot(data = rdResults) +
     axis.title.y = element_text(margin = margin(r = 12)),
     axis.title.x = element_blank(),
     axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-    axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+    axis.text.x = element_text(size = 9, lineheight = 1.1, face = 'bold'),
     text = element_text(family = 'LM Roman 10'),
     panel.border = element_rect(color = 'black', size = 1),
     panel.grid.major.x = element_blank(),
