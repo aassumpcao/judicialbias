@@ -2,6 +2,7 @@ library(tidyverse)
 
 # load data
 sctLitigants_random <- read_csv('data/sctLitigants_random.csv')
+load('data/sctSummary.Rda')
 load('data/tjspAnalysis.Rda')
 load('data/tjspAnalysisRandom.Rda')
 
@@ -23,12 +24,19 @@ pf_vs_pj_random <- sctLitigants_random %>%
   filter(claimant_pe, !defendant_pe) %>% 
   select(case.ID = Processo, claimant)
 
+pf_vs_pj_politician <- sctSummary %>%
+  mutate_at(vars(claimant, defendant), clean_name) %>% 
+  mutate_at(vars(claimant, defendant), list(pe = is_person)) %>% 
+  filter(claimant_pe, !defendant_pe) %>% 
+  select(case.ID = caseID, claimant)
+
 tjspAnalysisRandom <- tjspAnalysisRandom %>% 
   mutate(origin = "random") %>% 
   mutate_if(is.factor, as.character) %>% 
   semi_join(pf_vs_pj_random, c("case.ID"))
 
 d_final <- tjspAnalysis %>% 
+  semi_join(pf_vs_pj_politician, "case.ID") %>% 
   filter(candidate.litigant.type == "Claimant") %>% 
   mutate(origin = "politician") %>% 
   rename(claimant.win = case.claimant.win) %>% 
