@@ -25,6 +25,77 @@ load('data/tjspSimulation1ClaimantWin.Rda')
 load('data/tjspSimulation1DefendantWin.Rda')
 load('data/tjspSimulation2DefendantWin.Rda')
 
+# function definition
+# 5. create function to plot simulation iqr and mean graphs
+graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
+  save = FALSE, name = NULL) {
+
+  # initiate plot object
+  p <- ggplot() +
+    geom_histogram(
+      aes(x = x, fill = 'grey79'), bins = bins, alpha = .5, color = 'black'
+    )
+
+  # define graphical parameters for y
+  y_min  <- 0
+  y_max  <- max(ggplot_build(p)$data[[1]]['y']) + 10
+  y_incr <- round((y_max - y_min) / 10, 0)
+  y_col  <- y_max
+
+  # define graphical parameters for x
+  x_max  <- max(ggplot_build(p)$data[[1]]['x'])
+  x_min  <- min(ggplot_build(p)$data[[1]]['x'])
+  x_incr <- round((x_max - x_min) / 5, 2)
+
+  # define label parameters
+  signif  <- quantile(x, probs = .05)
+  pvalue  <- ecdf(x)
+  x_value <- pvalue(y)
+  label   <- paste0('p-value = ', round(x_value, 3))
+
+  # finish graph
+  p <- p +
+    scale_x_continuous(breaks = round(seq(x_min, x_max, x_incr), 1)) +
+    scale_y_continuous(breaks = round(seq(y_min, y_max, y_incr), 1)) +
+    geom_col(
+      aes(x = y, y = y_col, fill = 'grey25'), color = 'black', width = width
+    ) +
+    geom_text(
+      aes(y = y_col, x = y), label = label, family = 'LM Roman 10',
+      position = position_nudge(y = y_incr / 2)
+    ) +
+    scale_fill_manual(
+      name = element_blank(), values = c('grey25', 'grey79'),
+      labels = paste0(c('Empirical ', 'Simulated '), legend)
+    ) +
+    labs(y = 'Density', x = paste0('Simulated ', legend)) +
+    theme_bw() +
+    theme(
+      axis.title = element_text(size = 10),
+      axis.title.y = element_text(margin = margin(r = 12)),
+      axis.title.x = element_blank(),
+      axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+      axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+      text = element_text(family = 'LM Roman 10'),
+      panel.border = element_rect(color = 'black', size = 1),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      panel.grid.major.y = element_line(color = 'grey79'),
+      legend.position = 'bottom'
+    )
+
+  # save plot if requested
+  if (save == TRUE & !is.null(name)) {
+    ggsave(
+      filename = paste0(name, '.pdf'), plot = p, device = cairo_pdf,
+      path = 'plots', dpi = 100, width = 7, height = 5
+    )
+  }
+
+  # return plot
+  return(p)
+}
+
 # rename objects
 # the distribution of covariates per judge for politicians and random cases
 s.politician.age <- simulated.mean
@@ -240,6 +311,40 @@ stargazer(
 )
 
 ### analysis tables
+# sample representativeness
+# create a distribution of t-statistics to compare against empirical draw
+robust_tstat <- function(var1 = var1, var2 = var2, sample_size = 1000){
+  sample1 <- sample(var1, sample_size)
+  sample2 <- sample(var2, sample_size)
+  means <- t.test(sample1, sample2)$estimate %>% unname()
+  diff <- means[2] - means[1]
+  return(diff)
+}
+
+# define vars 1 and 2 as the claimaint win variables from either sample
+var1 <- tjspAnalysis$case.claimant.win
+var2 <- tjspAnalysisRandom$claimant.win
+
+# simulate 1,000 draws
+simulated_diff <- replicate(1000, robust_tstat(var1, var2))
+
+# define empirical distribution of t-statistics
+empirical_diff <- t.test(var1, var2)$estimate
+empirical_diff <- empirical_diff[2] - empirical_diff[1]
+
+# produce graph
+p -> graphDistr(
+  simulated_diff, empirical_diff, width = .003, legend = 'Mean Difference',
+  # save = TRUE, name = 'claimant'
+) +
+scale_x_continuous()
+
+# save
+ggsave(
+  filename = 'claimant-win-comparison', plot = p, device = cairo_pdf,
+  path = 'plots', dpi = 100, width = 7, height = 5
+)
+
 # abrams et al (2012) random assignment test. we create a random assignment
 # dataset to use as a baseline distribution against which we compare the empi-
 # rical realization of my own sample
@@ -333,12 +438,16 @@ casesRandom <- countJudges(tjspAnalysisRandom)
 
 # 3. calculate moments of simulated distribution and return them in a list
 calculateMoments <- function(judges, simulation){
+
   # uncount variables
   ids <- uncount(judges, n)
+
   # bind to simulation
   simulation %<>% bind_cols(ids) %>% select(1001, 1:1000)
+
   # summarize simulation to judge means
   simulation %<>% group_by(case.judge) %>% summarize_all(mean) %>% select(-1)
+
   # extract moment distributions from simulated and empirical datasets
   simulation.mean <- simulation %>%
     t() %>%
@@ -346,12 +455,16 @@ calculateMoments <- function(judges, simulation){
     summarize_all(mean) %>%
     unlist() %>%
     unname()
+
   # extract moment distributions from simulated datasets
   simulation.ci <- quantile(simulation.mean, probs = c(.05, .95))
+
   # compute the 1,000 iqr for both distributions
   simulation.iqr <- summarize_all(simulation, IQR) %>% unlist() %>% unname()
+
   # return list with simulation moments
   obj <- list(ci = simulation.ci, iqr = simulation.iqr, mean = simulation.mean)
+
   # return iqr distribution
   return(obj)
 }
@@ -369,8 +482,10 @@ s.defendant.win02 <- calculateMoments(casesRandom, s.defendant.win02)
 
 # 4. calculate moments for empirical distribution
 calculateEmpiricalMoments <- function(dataset, variables){
+
   # narrow down dataset to age and sct outcome variables
   dataset %<>% group_by(case.judge) %>% select(case.judge, variables)
+
   # extract moment distributions from empirical dataset (age)
   empirical.iqr <- dataset %>%
     select(case.judge, variables) %>%
@@ -379,6 +494,7 @@ calculateEmpiricalMoments <- function(dataset, variables){
     summarize_all(IQR) %>%
     select(-case.judge) %>%
     unlist()
+
   # extract moment distributions from empirical dataset (sct favorable)
   empirical.mean <- dataset %>%
     select(case.judge, variables) %>%
@@ -387,6 +503,7 @@ calculateEmpiricalMoments <- function(dataset, variables){
     select(-case.judge) %>%
     lapply(mean) %>%
     unlist()
+
   # return call
   return(list(iqr = empirical.iqr, mean = empirical.mean))
 }
@@ -406,69 +523,6 @@ c <- list(tjspAnalysisRandom, c('claimant.win', 'claimant.sex','defendant.win'))
 empirical.politicians <- do.call(calculateEmpiricalMoments, a)
 empirical.pdefendants <- do.call(calculateEmpiricalMoments, b)
 empirical.randomcases <- do.call(calculateEmpiricalMoments, c)
-
-# 5. create function to plot iqr and mean graphs
-graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
-  save = FALSE, name = NULL) {
-  # initiate plot object
-  p <- ggplot() +
-    geom_histogram(
-      aes(x = x, fill = 'grey79'), bins = bins, alpha = .5, color = 'black'
-    )
-  # define graphical parameters for y
-  y_min  <- 0
-  y_max  <- max(ggplot_build(p)$data[[1]]['y']) + 10
-  y_incr <- round((y_max - y_min) / 10, 0)
-  y_col  <- y_max
-  # define graphical parameters for x
-  x_max  <- max(ggplot_build(p)$data[[1]]['x'])
-  x_min  <- min(ggplot_build(p)$data[[1]]['x'])
-  x_incr <- round((x_max - x_min) / 5, 2)
-  # define label parameters
-  signif  <- quantile(x, probs = .05)
-  pvalue  <- ecdf(x)
-  x_value <- pvalue(y)
-  label   <- paste0('p-value = ', round(x_value, 3))
-  # finish graph
-  p <- p +
-    scale_x_continuous(breaks = round(seq(x_min, x_max, x_incr), 1)) +
-    scale_y_continuous(breaks = round(seq(y_min, y_max, y_incr), 1)) +
-    geom_col(
-      aes(x = y, y = y_col, fill = 'grey25'), color = 'black', width = width
-    ) +
-    geom_text(
-      aes(y = y_col, x = y), label = label, family = 'LM Roman 10',
-      position = position_nudge(y = y_incr / 2)
-    ) +
-    scale_fill_manual(
-      name = element_blank(), values = c('grey25', 'grey79'),
-      labels = paste0(c('Empirical ', 'Simulated '), legend)
-    ) +
-    labs(y = 'Density', x = paste0('Simulated ', legend)) +
-    theme_bw() +
-    theme(
-      axis.title = element_text(size = 10),
-      axis.title.y = element_text(margin = margin(r = 12)),
-      axis.title.x = element_blank(),
-      axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-      axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-      text = element_text(family = 'LM Roman 10'),
-      panel.border = element_rect(color = 'black', size = 1),
-      panel.grid.major.x = element_blank(),
-      panel.grid.minor.x = element_blank(),
-      panel.grid.major.y = element_line(color = 'grey79'),
-      legend.position = 'bottom'
-    )
-  # save plot if requested
-  if (save == TRUE & !is.null(name)) {
-    ggsave(
-      filename = paste0(name, '.pdf'), plot = p, device = cairo_pdf,
-      path = 'plots', dpi = 100, width = 7, height = 5
-    )
-  }
-  # return plot
-  return(p)
-}
 
 # produce plots for comparison of politician wins
 graphDistr(
@@ -529,8 +583,9 @@ save(tjspElected, file = 'data/tjspElected.Rda')
 bws <- c(.40, .35, .30, .25, .20, .15, .10, .0842, .05, .01)
 
 # create dataset for rd regressions
-rdData <- filter(tjspElected, office.ID == 11 & case.lastupdate > rd.date) %>%
-          mutate(treatment = ifelse(election.share > 0, 1, 0))
+rdData <- tjspElected %>%
+  filter(office.ID == 11 & case.lastupdate > rd.date) %>%
+  mutate(treatment = ifelse(election.share > 0, 1, 0))
 rdData %<>% replace_na(list(
   election.share = median(rdData$election.share, na.rm = TRUE),
   treatment = median(rdData$treatment, na.rm = TRUE))
