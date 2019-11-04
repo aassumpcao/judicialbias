@@ -224,7 +224,7 @@ tjspAnalysis %<>%
   select(
     matches('^case'), matches('^judge'), tjsp.ID, ibge.ID, election.ID,
     matches('^elect|^tot|^voto'), matches('^off'), matches('^candida'),
-    matches('^par')
+    matches('^par'), -judge.name
   )
 
 # do the same for random cases
