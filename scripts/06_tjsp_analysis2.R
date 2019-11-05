@@ -240,6 +240,47 @@ stargazer(
 )
 
 ### analysis tables
+# sample representativeness
+# define vars 1 and 2 as the claimant win by judge from either sample
+var1 <- group_by(tjspAnalysis, case.judge) %>%
+        summarize(case.claimant.win = mean(case.claimant.win)) %>%
+        select(case.claimant.win) %>%
+        unlist()
+var2 <- group_by(tjspAnalysisRandom, case.judge) %>%
+        summarize(claimant.win = mean(claimant.win)) %>%
+        select(claimant.win) %>%
+        unlist()
+
+# store results of mean comparison
+sample_comparison <- t.test(var1, var2)
+
+# define mean claimant win for politicians as claimants
+politician_claimant <- tjspAnalysis %>%
+  filter(candidate.litigant.type == 'Claimant') %>%
+  group_by(case.judge) %>%
+  summarize(case.claimant.win = mean(case.claimant.win)) %>%
+  transmute(group = 'Politician Claimant', win = case.claimant.win)
+politician_defendant <- tjspAnalysis %>%
+  filter(candidate.litigant.type == 'Defendant') %>%
+  group_by(case.judge) %>%
+  summarize(case.defendant.win = mean(case.defendant.win)) %>%
+  transmute(group = 'Politician Defendant', win = case.defendant.win)
+random_claimant <- tjspAnalysisRandom %>%
+  group_by(case.judge) %>%
+  summarize(claimant.win = mean(claimant.win)) %>%
+  transmute(group = 'Random Claimant', win = claimant.win)
+random_defendant <- tjspAnalysisRandom %>%
+  group_by(case.judge) %>%
+  summarize(defendant.win = mean(defendant.win)) %>%
+  transmute(group = 'Random Defendant', win = defendant.win)
+
+# create boxplot
+boxplot.data <- bind_rows(
+  politician_claimant, politician_defendant, random_claimant, random_defendant
+)
+
+ggplot(boxplot.data, aes(x = group, y = win, fill = group)) + geom_boxplot()
+
 # abrams et al (2012) random assignment test. we create a random assignment
 # dataset to use as a baseline distribution against which we compare the empi-
 # rical realization of my own sample
@@ -333,12 +374,16 @@ casesRandom <- countJudges(tjspAnalysisRandom)
 
 # 3. calculate moments of simulated distribution and return them in a list
 calculateMoments <- function(judges, simulation){
+
   # uncount variables
   ids <- uncount(judges, n)
+
   # bind to simulation
   simulation %<>% bind_cols(ids) %>% select(1001, 1:1000)
+
   # summarize simulation to judge means
   simulation %<>% group_by(case.judge) %>% summarize_all(mean) %>% select(-1)
+
   # extract moment distributions from simulated and empirical datasets
   simulation.mean <- simulation %>%
     t() %>%
@@ -346,12 +391,16 @@ calculateMoments <- function(judges, simulation){
     summarize_all(mean) %>%
     unlist() %>%
     unname()
+
   # extract moment distributions from simulated datasets
   simulation.ci <- quantile(simulation.mean, probs = c(.05, .95))
+
   # compute the 1,000 iqr for both distributions
   simulation.iqr <- summarize_all(simulation, IQR) %>% unlist() %>% unname()
+
   # return list with simulation moments
   obj <- list(ci = simulation.ci, iqr = simulation.iqr, mean = simulation.mean)
+
   # return iqr distribution
   return(obj)
 }
@@ -369,8 +418,10 @@ s.defendant.win02 <- calculateMoments(casesRandom, s.defendant.win02)
 
 # 4. calculate moments for empirical distribution
 calculateEmpiricalMoments <- function(dataset, variables){
+
   # narrow down dataset to age and sct outcome variables
   dataset %<>% group_by(case.judge) %>% select(case.judge, variables)
+
   # extract moment distributions from empirical dataset (age)
   empirical.iqr <- dataset %>%
     select(case.judge, variables) %>%
@@ -379,6 +430,7 @@ calculateEmpiricalMoments <- function(dataset, variables){
     summarize_all(IQR) %>%
     select(-case.judge) %>%
     unlist()
+
   # extract moment distributions from empirical dataset (sct favorable)
   empirical.mean <- dataset %>%
     select(case.judge, variables) %>%
@@ -387,6 +439,7 @@ calculateEmpiricalMoments <- function(dataset, variables){
     select(-case.judge) %>%
     lapply(mean) %>%
     unlist()
+
   # return call
   return(list(iqr = empirical.iqr, mean = empirical.mean))
 }
@@ -407,28 +460,33 @@ empirical.politicians <- do.call(calculateEmpiricalMoments, a)
 empirical.pdefendants <- do.call(calculateEmpiricalMoments, b)
 empirical.randomcases <- do.call(calculateEmpiricalMoments, c)
 
-# 5. create function to plot iqr and mean graphs
+# 5. create function to plot simulation iqr and mean graphs
 graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
   save = FALSE, name = NULL) {
+
   # initiate plot object
   p <- ggplot() +
     geom_histogram(
       aes(x = x, fill = 'grey79'), bins = bins, alpha = .5, color = 'black'
     )
+
   # define graphical parameters for y
   y_min  <- 0
   y_max  <- max(ggplot_build(p)$data[[1]]['y']) + 10
   y_incr <- round((y_max - y_min) / 10, 0)
   y_col  <- y_max
+
   # define graphical parameters for x
   x_max  <- max(ggplot_build(p)$data[[1]]['x'])
   x_min  <- min(ggplot_build(p)$data[[1]]['x'])
   x_incr <- round((x_max - x_min) / 5, 2)
+
   # define label parameters
   signif  <- quantile(x, probs = .05)
   pvalue  <- ecdf(x)
   x_value <- pvalue(y)
   label   <- paste0('p-value = ', round(x_value, 3))
+
   # finish graph
   p <- p +
     scale_x_continuous(breaks = round(seq(x_min, x_max, x_incr), 1)) +
@@ -459,6 +517,7 @@ graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
       panel.grid.major.y = element_line(color = 'grey79'),
       legend.position = 'bottom'
     )
+
   # save plot if requested
   if (save == TRUE & !is.null(name)) {
     ggsave(
@@ -466,6 +525,7 @@ graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
       path = 'plots', dpi = 100, width = 7, height = 5
     )
   }
+
   # return plot
   return(p)
 }
@@ -529,8 +589,9 @@ save(tjspElected, file = 'data/tjspElected.Rda')
 bws <- c(.40, .35, .30, .25, .20, .15, .10, .0842, .05, .01)
 
 # create dataset for rd regressions
-rdData <- filter(tjspElected, office.ID == 11 & case.lastupdate > rd.date) %>%
-          mutate(treatment = ifelse(election.share > 0, 1, 0))
+rdData <- tjspElected %>%
+  filter(office.ID == 11 & case.lastupdate > rd.date) %>%
+  mutate(treatment = ifelse(election.share > 0, 1, 0))
 rdData %<>% replace_na(list(
   election.share = median(rdData$election.share, na.rm = TRUE),
   treatment = median(rdData$treatment, na.rm = TRUE))
