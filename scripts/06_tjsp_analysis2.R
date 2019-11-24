@@ -3,7 +3,7 @@
 # andre assumpcao and julio trecenti
 # email: andre.assumpcao@gmail.com
 # email: julio.trecenti@gmail.com
-
+rm(list = ls())
 ### data and library calls
 # import libraries
 library(AER)
@@ -17,13 +17,13 @@ library(xtable)
 # load data
 load('data/tjspAnalysis.Rda')
 load('data/tjspAnalysisRandom.Rda')
-load('data/tjspSimulation1.Rda')
-load('data/tjspSimulation2.Rda')
-load('data/tjspSimulation1Random.Rda')
-load('data/tjspSimulation2Random.Rda')
-load('data/tjspSimulation1ClaimantWin.Rda')
-load('data/tjspSimulation1DefendantWin.Rda')
-load('data/tjspSimulation2DefendantWin.Rda')
+# load('data/tjspSimulation1.Rda')
+# load('data/tjspSimulation2.Rda')
+# load('data/tjspSimulation1Random.Rda')
+# load('data/tjspSimulation2Random.Rda')
+# load('data/tjspSimulation1ClaimantWin.Rda')
+# load('data/tjspSimulation1DefendantWin.Rda')
+# load('data/tjspSimulation2DefendantWin.Rda')
 
 # rename objects
 # the distribution of covariates per judge for politicians and random cases
@@ -80,7 +80,9 @@ tjspAnalysis %<>%
   mutate(judge.gender = as.integer(ifelse(judge.gender == 'Female', 0, 1))) %>%
   mutate(
     candidate.gender = as.integer(ifelse(candidate.gender == 'FEMININO', 0, 1)),
-  )
+  ) %>%
+  replace_na(list(candidate.elect = 1))
+
 
 # do the same for random cases
 integers <- c('case.claim', 'judge.pay', 'judge.tenure')
@@ -141,7 +143,7 @@ stargazer(
     as.data.frame(),
 
   # table cosmetics
-  type = 'latex',
+  type = 'text',
   title = 'Descriptive Statistics',
   style = 'default',
   summary = TRUE,
@@ -175,7 +177,7 @@ stargazer(
     as.data.frame(),
 
   # table cosmetics
-  type = 'latex',
+  type = 'text',
   title = 'Descriptive Statistics',
   style = 'default',
   summary = TRUE,
@@ -217,7 +219,7 @@ stargazer(
     as.data.frame(),
 
   # table cosmetics
-  type = 'latex',
+  type = 'text',
   title = 'Descriptive Statistics',
   style = 'default',
   summary = TRUE,
@@ -242,44 +244,86 @@ stargazer(
 ### analysis tables
 # sample representativeness
 # define vars 1 and 2 as the claimant win by judge from either sample
-var1 <- group_by(tjspAnalysis, case.judge) %>%
-        summarize(case.claimant.win = mean(case.claimant.win)) %>%
-        select(case.claimant.win) %>%
-        unlist()
-var2 <- group_by(tjspAnalysisRandom, case.judge) %>%
-        summarize(claimant.win = mean(claimant.win)) %>%
-        select(claimant.win) %>%
-        unlist()
+claimant_politician_sample <- tjspAnalysis %>%
+  group_by(case.judge) %>%
+  summarize(case.claimant.win = mean(case.claimant.win)) %>%
+  select(case.claimant.win) %>%
+  unlist()
+claimant_random_sample <- tjspAnalysisRandom %>%
+  group_by(case.judge) %>%
+  summarize(claimant.win = mean(claimant.win)) %>%
+  select(claimant.win) %>%
+  unlist()
 
-# store results of mean comparison
-sample_comparison <- t.test(var1, var2)
 
 # define mean claimant win for politicians as claimants
 politician_claimant <- tjspAnalysis %>%
   filter(candidate.litigant.type == 'Claimant') %>%
   group_by(case.judge) %>%
   summarize(case.claimant.win = mean(case.claimant.win)) %>%
-  transmute(group = 'Politician Claimant', win = case.claimant.win)
+  select(case.claimant.win) %>%
+  unlist()
 politician_defendant <- tjspAnalysis %>%
   filter(candidate.litigant.type == 'Defendant') %>%
   group_by(case.judge) %>%
   summarize(case.defendant.win = mean(case.defendant.win)) %>%
-  transmute(group = 'Politician Defendant', win = case.defendant.win)
-random_claimant <- tjspAnalysisRandom %>%
-  group_by(case.judge) %>%
-  summarize(claimant.win = mean(claimant.win)) %>%
-  transmute(group = 'Random Claimant', win = claimant.win)
+  select(case.defendant.win) %>%
+  unlist()
 random_defendant <- tjspAnalysisRandom %>%
   group_by(case.judge) %>%
   summarize(defendant.win = mean(defendant.win)) %>%
-  transmute(group = 'Random Defendant', win = defendant.win)
+  select(defendant.win) %>%
+  unlist()
+
+# store results of mean comparison
+sample_comparison <- t.test(claimant_politician_sample, claimant_random_sample)
+politician_comparison1 <- t.test(politician_claimant, claimant_random_sample)
+politician_comparison2 <- t.test(politician_defendant, random_defendant)
 
 # create boxplot
-boxplot.data <- bind_rows(
-  politician_claimant, politician_defendant, random_claimant, random_defendant
-)
+p <- bind_rows(
 
-ggplot(boxplot.data, aes(x = group, y = win, fill = group)) + geom_boxplot()
+  # aggregate first dataset to only show results for claimant politicians
+  tjspAnalysis %>%
+    filter(candidate.litigant.type == 'Claimant') %>%
+    group_by(case.judge) %>%
+    summarize(case.claimant.win = mean(case.claimant.win)) %>%
+    transmute(group = 'Claimant: Politician', win = case.claimant.win),
+
+  # aggregate second dataset to show results by judge
+  tjspAnalysisRandom %>%
+    group_by(case.judge) %>%
+    summarize(claimant.win = mean(claimant.win)) %>%
+    transmute(group = 'Claimant: Anyone', win = claimant.win)
+  ) %>%
+  mutate(
+    group = factor(group, levels = c('Claimant: Politician','Claimant: Anyone'))
+  ) %>%
+  ggplot(aes(x = group, y = win, fill = group)) +
+  scale_y_continuous(breaks = seq(0, 1, .125)) +
+  scale_fill_manual(breaks = NULL, values = c('grey54', 'grey79')) +
+  geom_boxplot(width = .5) +
+  labs(y = 'Claimant Win Average Per Judge', x = element_blank()) +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 10),
+    axis.title.y = element_text(margin = margin(r = 12)),
+    axis.title.x = element_blank(),
+    axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+    axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+    text = element_text(family = 'LM Roman 10'),
+    panel.border = element_rect(color = 'black', size = 1),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(linetype = 'dashed', color = 'grey79'),
+    panel.grid.minor.y = element_line(linetype = 'dashed', color = 'grey79')
+  )
+
+# # save plot
+# ggsave(
+#   filename = 'claimant-boxplot.pdf', plot = p, device = cairo_pdf,
+#   path = 'plots', dpi = 100, width = 7, height = 5
+# )
 
 # abrams et al (2012) random assignment test. we create a random assignment
 # dataset to use as a baseline distribution against which we compare the empi-
@@ -320,51 +364,49 @@ sampleCourts <- function(dataset, court, n, var, ...) {
 cases <- countJudges(tjspAnalysis)
 casesRandom <- countJudges(tjspAnalysisRandom)
 
-# # 4. create function to execute with monte carlo simulations for covariate age
-# object1 <- tibble(.rows = nrow(tjspAnalysis))
-# object2 <- tibble(.rows = nrow(tjspAnalysisRandom))
+# 4. create function to execute monte carlo simulations
+simulateVar <- function(dataset1, dataset2, var, nsim = 1000){
+  # return object
+  object <- tibble(.rows = nrow(dataset1))
+  # execute loop creating monte carlo simulation for covariate age
+  for (x in 1:nsim) {
+    # create vector containing simulation results
+    simulations <- c()
+    # execute loop to create simulations
+    for (i in 1:nrow(dataset2)) {
+      # create list of arguments
+      args <- list(
+        dataset1, as.character(dataset2[i, 'tjsp.ID']),
+        dataset2[i, 'n'], var, replace = TRUE
+      )
+      # call to sampleCourts using args from cases
+      row <- do.call(sampleCourts, args)
+      # bind onto vector
+      simulations <- c(simulations, row)
+    }
+    # convert to numeric
+    simulations <- as.numeric(simulations)
+    # extract mean and iqr
+    object <- bind_cols(object, sim = simulations)
+    # print progress
+    if (x %% 100 == 0) {print(x)}
+  }
+  return(object)
+}
 
-# # we have to run this loop three times to produce five datasets:
-# # first run:
-# #   tjspSimulation1.Rda
-# #   tjspSimulation2.Rda
-# # second run:
-# #   tjspSimulation1Random.Rda
-# #   tjspSimulation2Random.Rda
-# # third run:
-# #   tjspSimulation2ClaimantWin.Rda
+# run simulations for each variable:
+# 1. candidate.age:       i want to prove random allocation of politician cases
+# 2. candidate.claimant:  i want to prove that court outcomes are not random
+# 3. claimant.sex:        i want to prove random allocation of random cases
+# 4. claimant.win:        i want to prove that court outcomes are random
+# 5. candidate.defendant:
+# 6. random.defendant:
 
-# # execute loop creating monte carlo simulation for covariate age
-# for (x in 1:1000) {
-#   # create vector containing simulation results
-#   simulats <- c()
-#   outcomes <- c()
-#   # execute loop to create simulations
-#   for (i in 1:nrow(casesRandom)) {
-#     # create list of arguments
-#     args <- list(
-#       tjspAnalysisRandom, as.character(casesRandom[i, 'tjsp.ID']),
-#       casesRandom[i, 'n'], 'claimant.sex', replace = TRUE
-#     )
-#     # call to sampleCourts using args from cases
-#     row <- do.call(sampleCourts, args)
-#     # replace list elements
-#     args[[4]] <- 'defendant.win'
-#     # call to sampleCourts to build outcome
-#     outcome <- do.call(sampleCourts, args)
-#     # bind onto vector
-#     simulats <- c(simulats, row)
-#     outcomes <- c(outcomes, outcome)
-#   }
-#   # convert to numeric
-#   simulats <- as.numeric(simulats)
-#   outcomes <- as.integer(outcomes)
-#   # extract mean and iqr
-#   object1 <- bind_cols(object1, sim = simulats)
-#   object2 <- bind_cols(object2, sim = outcomes)
-#   # print progress
-#   if (x %% 100 == 0) {print(x)}
-# }
+# create simulation objects
+random_allc1 <- simulateVar(tjspAnalysis, cases, 'candidate.age')
+random_allc2 <- simulateVar(tjspAnalysisRandom, casesRandom, 'candidate.sex')
+claimant_pol <- simulateVar(tjspAnalysis, cases, 'sct.favorable')
+claimant_random <- simulateVar(tjspAnalysisRandom, casesRandom, 'claimant.win')
 
 # # save dataset
 # object1 -> simulated.mean
@@ -374,16 +416,12 @@ casesRandom <- countJudges(tjspAnalysisRandom)
 
 # 3. calculate moments of simulated distribution and return them in a list
 calculateMoments <- function(judges, simulation){
-
   # uncount variables
   ids <- uncount(judges, n)
-
   # bind to simulation
   simulation %<>% bind_cols(ids) %>% select(1001, 1:1000)
-
   # summarize simulation to judge means
   simulation %<>% group_by(case.judge) %>% summarize_all(mean) %>% select(-1)
-
   # extract moment distributions from simulated and empirical datasets
   simulation.mean <- simulation %>%
     t() %>%
@@ -391,16 +429,12 @@ calculateMoments <- function(judges, simulation){
     summarize_all(mean) %>%
     unlist() %>%
     unname()
-
   # extract moment distributions from simulated datasets
   simulation.ci <- quantile(simulation.mean, probs = c(.05, .95))
-
   # compute the 1,000 iqr for both distributions
   simulation.iqr <- summarize_all(simulation, IQR) %>% unlist() %>% unname()
-
   # return list with simulation moments
   obj <- list(ci = simulation.ci, iqr = simulation.iqr, mean = simulation.mean)
-
   # return iqr distribution
   return(obj)
 }
