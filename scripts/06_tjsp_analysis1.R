@@ -1,5 +1,5 @@
 ### judicial favoritism of politicians
-#  this script produces paper analysis
+#  this script produces consistent datasets for analysis
 # andre assumpcao and julio trecenti
 # email: andre.assumpcao@gmail.com
 # email: julio.trecenti@gmail.com
