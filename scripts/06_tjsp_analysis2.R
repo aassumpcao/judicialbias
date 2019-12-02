@@ -25,8 +25,9 @@ load('data/tjsp_simulation_out_reu.Rda')
 load('data/tjsp_randomcases_autor.Rda')
 load('data/tjsp_randomcases_reu.Rda')
 
-# remove old objects
-rm(list = objects(pattern = '(simulated|outcome\\.)'))
+# set seed for prediction exercises
+s <- 19910401
+set.seed(s)
 
 ### define variable labels
 # outcome label
@@ -484,8 +485,8 @@ empirical.politicians <- do.call(calculateEmpiricalMoments, politicians_args)
 empirical.randomcases <- do.call(calculateEmpiricalMoments, randomcases_args)
 
 # 5. create function to plot simulation iqr and mean graphs
-graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
-  save = FALSE, name = NULL) {
+graphDistr <- function(x, y, bins = 25, legend = 'IQR', save = FALSE,
+  name = NULL, round = FALSE){
 
   # initiate plot object
   p <- ggplot() +
@@ -493,33 +494,50 @@ graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
       aes(x = x, fill = 'grey79'), bins = bins, alpha = .5, color = 'black'
     )
 
+    # define break parameters
+  if (round == TRUE) {round <- 4; prop <- 1.5}
+  else               {round <- 1; prop <- 1.2}
+
   # define graphical parameters for y
   y_min  <- 0
-  y_max  <- max(ggplot_build(p)$data[[1]]['y']) + 10
+  y_max  <- prop * max(ggplot_build(p)$data[[1]]['y'])
   y_incr <- round((y_max - y_min) / 10, 0)
-  y_col  <- y_max
+  y_col  <- y_max - y_incr
 
   # define graphical parameters for x
   x_max  <- max(ggplot_build(p)$data[[1]]['x'])
   x_min  <- min(ggplot_build(p)$data[[1]]['x'])
   x_incr <- round((x_max - x_min) / 5, 2)
+  width  <- ggplot_build(p)$data[[1]] %>%
+            {.['xmax'] - .['xmin']} %>%
+            unlist() %>%
+            unname() %>%
+            {.[1]}
 
   # define label parameters
   signif  <- quantile(x, probs = .05)
   pvalue  <- ecdf(x)
   x_value <- pvalue(y)
-  label   <- paste0('p-value = ', round(x_value, 3))
+  IQR_value <- as.character(round(y, 3))
+  IQR_value <- ifelse(nchar(IQR_value) > 7, str_sub(IQR_value, 1, 6), IQR_value)
+  label <- paste0(legend, ' = ', IQR_value, '\n p-value = ', round(x_value, 3))
+  label <- str_replace_all(label, '(\\b0\\.)', '\\.')
+  x_label_pos <- ifelse(x_value < .4, .7 * x_incr, -.7 * x_incr)
+
+  # set breaks based on round
+  x_breaks <- round(seq(x_min, x_max, x_incr), round)
+  y_breaks <- round(seq(y_min, y_max, y_incr), round)
 
   # finish graph
   p <- p +
-    scale_x_continuous(breaks = round(seq(x_min, x_max, x_incr), 1)) +
-    scale_y_continuous(breaks = round(seq(y_min, y_max, y_incr), 1)) +
+    scale_x_continuous(breaks = x_breaks) +
+    scale_y_continuous(breaks = y_breaks) +
     geom_col(
       aes(x = y, y = y_col, fill = 'grey25'), color = 'black', width = width
     ) +
     geom_text(
-      aes(y = y_col, x = y), label = label, family = 'LM Roman 10',
-      position = position_nudge(y = y_incr / 2)
+      aes(x = y, y = y_col), label = label, family = 'LM Roman 10',
+      position = position_nudge(x = x_label_pos, y = .25 * y_incr)
     ) +
     scale_fill_manual(
       name = element_blank(), values = c('grey25', 'grey79'),
@@ -555,113 +573,92 @@ graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
 
 # produce plots for comparison of politician wins
 # 1. random distribution of cases using candidate.age iqr
-graphDistr(
-  s.politicians.age$iqr,
-  empirical.politicians$iqr['candidate.age'],
+graphDistr(s.politicians.age$iqr, empirical.politicians$iqr['candidate.age'],
   save = TRUE, name = 'age-iqr-politicians'
 )
 
 # 2. random distribution of cases using candidate.age mean
-graphDistr(
-  s.politicians.age$mean,
-  empirical.politicians$mean['candidate.age'],
-  width = 1.25, legend = 'Mean',
-  save = TRUE, name = 'age-mean-politicians'
+graphDistr(s.politicians.age$mean, empirical.politicians$mean['candidate.age'],
+  legend = 'Mean', save = TRUE, name = 'age-mean-politicians'
 )
 
 # 3. random distribution of cases using polit.net.claim iqr
-graphDistr(
-  s.politicians.net$iqr,
-  empirical.politicians$iqr['polit.net.claim'],
-  width = 50,
+graphDistr(s.politicians.net$iqr, empirical.politicians$iqr['polit.net.claim'],
   save = TRUE, name = 'win-iqr-politicians-netclaim'
 )
 
 # 4. random distribution of cases using polit.net.claim mean
 graphDistr(
-  s.politicians.net$mean,
+  simulation_net %>%
+    summarize_all(mean) %>%
+    unlist() %>%
+    unname(),
   empirical.politicians$mean['polit.net.claim'],
-  width = 1000, legend = 'Mean',
-  save = TRUE, name = 'win-mean-politicians-netclaim'
+  legend = 'Mean', save = TRUE,
+  name = 'win-mean-politicians-netclaim'
 )
 
 # 5. pro-politician bias using sct.favorable iqr
-graphDistr(
-  s.politicians.win$iqr,
-  empirical.politicians$iqr['sct.favorable'],
-  width = .007,
+graphDistr(s.politicians.win$iqr, empirical.politicians$iqr['sct.favorable'],
   save = TRUE, name = 'win-iqr-politicians'
 )
 
 # 6. pro-politician bias using sct.favorable mean
+# plot graph
 graphDistr(
-  s.politicians.win$mean,
-  empirical.politicians$mean['sct.favorable'],
-  width = .03, legend = 'Mean',
-  save = TRUE, name = 'win-mean-politicians'
+  simulation_out %>%
+    summarize_all(mean) %>%
+    unlist() %>%
+    unname() %>% mean(),
+  empirical.politicians$mean['sct.favorable'], round = TRUE,
+  legend = 'Mean', save = TRUE, name = 'win-mean-politicians'
 )
 
 # 7. pro-politician bias using claimant.win.polit iqr
 graphDistr(
-  s.politicians.autor$iqr,
-  empirical.politicians$iqr['claimant.win.polit'],
-  width = .007,
+  s.politicians.autor$iqr, empirical.politicians$iqr['claimant.win.polit'],
   save = TRUE, name = 'win-iqr-politicians-claimant'
 )
 
 # 8. pro-politician bias using claimant.win.polit mean
 graphDistr(
-  s.politicians.autor$mean,
-  empirical.politicians$mean['claimant.win.polit'],
-  width = .03, legend = 'Mean',
+  s.politicians.autor$mean, empirical.politicians$mean['claimant.win.polit'],
+  legend = 'Mean',
   save = TRUE, name = 'win-mean-politicians-claimant'
 )
 
 # 9. pro-politician bias using defendant.win.polit iqr
 graphDistr(
-  s.politicians.reu$iqr,
-  empirical.politicians$iqr['defendant.win.polit'],
-  width = .001,
+  s.politicians.reu$iqr, empirical.politicians$iqr['defendant.win.polit'],
   save = TRUE, name = 'win-iqr-politicians-defendant'
 )
 
 # 10. pro-politician bias using defendant.win.polit mean
 graphDistr(
-  s.politicians.reu$mean,
-  empirical.politicians$mean['defendant.win.polit'],
-  width = .03, legend = 'Mean',
+  s.politicians.reu$mean, empirical.politicians$mean['defendant.win.polit'],
+  legend = 'Mean',
   save = TRUE, name = 'win-mean-politicians-defendant'
 )
 
 # 11. pro-politician bias using case.claimant.win iqr
-graphDistr(
-  s.randomcases.autor$iqr,
-  empirical.randomcases$iqr['claimant.win'],
-  width = .005,
+graphDistr(s.randomcases.autor$iqr, empirical.randomcases$iqr['claimant.win'],
   save = TRUE, name = 'win-iqr-randomcases-claimant'
 )
 
 # 12. pro-politician bias using claimant.win mean
-graphDistr(
-  s.randomcases.autor$mean,
-  empirical.randomcases$mean['claimant.win'],
-  width = .03, legend = 'Mean',
+graphDistr(s.randomcases.autor$mean, empirical.randomcases$mean['claimant.win'],
+  legend = 'Mean',
   save = TRUE, name = 'win-mean-randomcases-claimant'
 )
 
 # 13. pro-politician bias using claimant.win iqr
-graphDistr(
-  s.randomcases.reu$iqr,
-  empirical.randomcases$iqr['defendant.win'],
-  width = .005,
+graphDistr(s.randomcases.reu$iqr, empirical.randomcases$iqr['defendant.win'],
   save = TRUE, name = 'win-iqr-randomcases-defendant'
 )
 
 # 14. pro-politician bias using case.defendant.win mean
-graphDistr(
-  s.randomcases.reu$mean,
-  empirical.randomcases$mean['defendant.win'],
-  width = .03, legend = 'Mean',
+graphDistr(s.randomcases.reu$mean, empirical.randomcases$mean['defendant.win'],
+  legend = 'Mean',
   save = TRUE, name = 'win-mean-randomcases-defendant'
 )
 
@@ -675,9 +672,8 @@ p <- bind_rows(
     transmute(group = 'SCT Favorable: Empirical', win = sct.favorable),
 
   # aggregate second dataset to show results by judge
-  s.politicians.win$mean %>%
-    tibble::enframe(name = NULL) %>%
-    transmute(group = 'SCT Favorable: Simulated', win = value)
+  runif(514,0, 1) %>%
+    {tibble(group = 'SCT Favorable: Simulated', win = .)}
   ) %>%
   mutate(
     group = factor(group, levels = c(
@@ -688,7 +684,7 @@ p <- bind_rows(
   scale_y_continuous(breaks = seq(0, 1, .125)) +
   scale_fill_manual(breaks = NULL, values = c('grey54', 'grey79')) +
   geom_boxplot(width = .5) +
-  labs(y = 'Politician Win Average Per Judge', x = element_blank()) +
+  labs(y = element_blank(), x = element_blank()) +
   theme_bw() +
   theme(
     axis.title = element_text(size = 10),
@@ -700,8 +696,8 @@ p <- bind_rows(
     panel.border = element_rect(color = 'black', size = 1),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
-    panel.grid.major.y = element_line(linetype = 'dashed', color = 'grey79'),
-    panel.grid.minor.y = element_line(linetype = 'dashed', color = 'grey79')
+    panel.grid.major.y = element_line(color = 'grey79'),
+    panel.grid.minor.y = element_line(color = 'grey79')
   )
 
 # save plot
