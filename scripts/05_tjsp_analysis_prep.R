@@ -184,7 +184,7 @@ tjspAnalysisRandom %<>%
   rename(caseID = caseID.x, politician.case = caseID.y) %>%
   inner_join(tjspAnalysis, c('politician.case' = 'caseID')) %>%
   ungroup() %>%
-  select(1:12, politician.case, matches('^judge(.)*y$'))
+  select(1:12, politician.case, case.duration.x, matches('^judge(.)*y$'))
 
 # match circuit and municipal information
 rows1 <- match(tjspAnalysis$caseID, str_remove_all(tjspMun$caseID, '\\.|-'))

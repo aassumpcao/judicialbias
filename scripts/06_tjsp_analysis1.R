@@ -40,6 +40,52 @@ is_person <- function(x) {
   !str_detect(x, re_comp) %>% return()
 }
 
+# compute type of litigant for each dataset
+politician_pj <- tjspSentences %>%
+  mutate_at(vars(claimant, defendant), clean_name) %>%
+  mutate_at(vars(claimant, defendant), list(pe = is_person)) %>%
+  select(case.ID = caseID, claimant_pe, defendant_pe) %>%
+  right_join(tjspAnalysis, by = 'case.ID') %>%
+  mutate(
+    case.claim = str_remove_all(case.claim, '\\.|R\\$') %>%
+                 str_replace_all(',', '.') %>%
+                 as.numeric()
+  )
+random_pj <- tjspLitigantsRandom %>%
+  mutate_at(vars(claimant, defendant), clean_name) %>%
+  mutate_at(vars(claimant, defendant), list(pe = is_person)) %>%
+  select(case.ID = id, claimant_pe, defendant_pe) %>%
+  right_join(tjspAnalysisRandom, by = 'case.ID') %>%
+  group_by(case.ID) %>%
+  filter(row_number() == 1) %>%
+  ungroup() %>%
+  mutate(
+    case.claim = str_remove_all(case.claim, '\\.|R\\$') %>%
+                 str_replace_all(',', '.') %>%
+                 as.numeric()
+  )
+
+# check frequency for defendant companies
+table1 <- politician_pj %>%
+  filter(!is.na(case.claim) & !is.na(defendant_pe)) %>%
+  mutate(defendant_pe = as.integer(defendant_pe)) %>%
+  {table(.$defendant_pe) / nrow(.)}
+table2 <- random_pj %>%
+  filter(!is.na(case.claim) & !is.na(defendant_pe)) %>%
+  mutate(defendant_pe = as.integer(defendant_pe)) %>%
+  {table(.$defendant_pe) / nrow(.)}
+
+# examine correlation case claim and defendant type
+bind_rows(
+  politician_pj %>%
+    filter(!is.na(case.claim) & !is.na(defendant_pe)) %>%
+    mutate(defendant_pe = as.integer(defendant_pe)),
+  random_pj %>%
+    filter(!is.na(case.claim) & !is.na(defendant_pe)) %>%
+    mutate(defendant_pe = as.integer(defendant_pe))
+) %$%
+cor(log(case.claim), defendant_pe) -> correlation
+
 # create different datasets for individual (pf) vs businesses
 pf_vs_pj_random <- tjspLitigantsRandom %>%
   mutate_at(vars(claimant, defendant), clean_name) %>%

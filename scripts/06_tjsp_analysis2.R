@@ -20,13 +20,16 @@ load('data/tjspAnalysisRandom.Rda')
 load('data/tjsp_simulation_age.Rda')
 load('data/tjsp_simulation_out.Rda')
 load('data/tjsp_simulation_net.Rda')
-load('data/tjsp_simulation_out_autor.Rda')
-load('data/tjsp_simulation_out_reu.Rda')
+load('data/tjsp_simulation_out_autor1.Rda')
+load('data/tjsp_simulation_out_autor2.Rda')
+load('data/tjsp_simulation_out_reu1.Rda')
+load('data/tjsp_simulation_out_reu2.Rda')
 load('data/tjsp_randomcases_autor.Rda')
 load('data/tjsp_randomcases_reu.Rda')
 
-# remove old objects
-rm(list = objects(pattern = '(simulated|outcome\\.)'))
+# set seed for prediction exercises
+s <- 19910401
+set.seed(s)
 
 ### define variable labels
 # outcome label
@@ -267,38 +270,6 @@ cases_per_judge <- tjspAnalysis %>%
   unlist() %>%
   mean()
 
-# sample representativeness
-# define mean claimant win for politicians as claimants
-politician_claimant <- tjspAnalysis %>%
-  filter(str_detect(candidate.litigant.type, 'Claimant')) %>%
-  group_by(case.judge) %>%
-  summarize(claimant.win.polit = mean(claimant.win.polit)) %>%
-  select(claimant.win.polit) %>%
-  unlist()
-politician_defendant <- tjspAnalysis %>%
-  filter(str_detect(candidate.litigant.type, 'Defendant')) %>%
-  group_by(case.judge) %>%
-  summarize(defendant.win.polit = mean(defendant.win.polit)) %>%
-  select(defendant.win.polit) %>%
-  unlist()
-random_claimant  <- tjspAnalysisRandom %>%
-  group_by(case.judge) %>%
-  summarize(claimant.win = mean(claimant.win)) %>%
-  select(claimant.win) %>%
-  unlist()
-random_defendant <- tjspAnalysisRandom %>%
-  group_by(case.judge) %>%
-  summarize(defendant.win = mean(defendant.win)) %>%
-  select(defendant.win) %>%
-  unlist()
-
-# store results of mean comparison
-politician_comparison1 <- t.test(politician_claimant,  random_claimant)
-politician_comparison2 <- t.test(politician_defendant, random_defendant)
-
-# print results
-politician_comparison1;politician_comparison2
-
 # abrams et al (2012) random assignment test. we create a random assignment
 # dataset to use as a baseline distribution against which we compare the empi-
 # rical realization of my own sample
@@ -310,61 +281,82 @@ politician_comparison1;politician_comparison2
 # 5. compute iqr across all observations
 # 6. repeat 1,000 times
 
-# 1. compute the number of cases by judge per court
-countJudges <- function(dataset){
-  # 1. count the number of cases per judge, 2. merge on the same dataset to
-  #  recover court ID, and 3. throw away repeated observations
-  count(dataset, case.judge) %>%
-  left_join(dataset, 'case.judge') %>%
-  select(1:2, tjsp.ID) %>%
-  mutate(tjsp.ID = as.character(tjsp.ID)) %>%
-  distinct(case.judge, .keep_all = TRUE) %>%
-  return()
-}
+# create function to produce simulations
+produceSimulations <- function(ds, var, return = 'simulation') {
 
-# 2. group cases by court to create sample from which to pull observations
-sampleCourts <- function(dataset, court, n, var, ...){
-  # create sliced dataset from court ID
-  df <- filter(dataset, tjsp.ID == court) %>% select(var)
-  # draw the number of observations from dataset
-  sim <- sample_n(df, as.integer(n), ...)
-  # assign new name to variables
-  sim <- unname(unlist(sim))
-  # return call
-  return(sim)
-}
-
-# 3. create objects using the countJudges function
-cases <- countJudges(tjspAnalysis)
-casesRandom <- countJudges(tjspAnalysisRandom)
-
-# 4. create function to execute monte carlo simulations
-simulateVar <- function(dataset1, dataset2, var, nsim = 1000){
-  # return object
-  object <- tibble(.rows = nrow(dataset1))
-  # execute loop creating monte carlo simulation for covariate age
-  for (x in 1:nsim) {
-    # create vector containing simulation results
-    simulations <- c()
-    # execute loop to create simulations
-    for (i in 1:nrow(dataset2)){
-      # create list of arguments
-      args <- list(
-        dataset1, as.character(dataset2[i, 'tjsp.ID']),
-        dataset2[i, 'n'], var, replace = TRUE
-      )
-      # call to sampleCourts using args from cases
-      row <- do.call(sampleCourts, args)
-      # bind onto vector
-      simulations <- c(simulations, row)
-    }
-    # convert to numeric
-    simulations <- as.numeric(simulations)
-    # extract mean and iqr
-    object <- bind_cols(object, sim = simulations)
-    # print progress
-    if (x %% 100 == 0) {print(x)}
+  # check if variable requires change in the denominator
+  check_var <- str_extract(var, '^(claimant|defendant)')
+  # if variable requires change in denominator, filter dataset
+  if (!is.na(check_var)) {check_var <- str_to_title(check_var)}
+  # check if candidate.litigant.type exists
+  if ('candidate.litigant.type' %in% names(ds) & !is.na(check_var)){
+    df <- filter(ds, str_detect(candidate.litigant.type, check_var))
+  } else {
+    df <- ds
   }
+
+  # 1. compute the number of cases by judge per court
+  countJudges <- function(dataset = df){
+    # 1. count the number of cases per judge, 2. merge on the same dataset to
+    #  recover court ID, and 3. throw away repeated observations
+    cases <- count(dataset, case.judge) %>%
+             left_join(dataset, 'case.judge') %>%
+             select(1:2, tjsp.ID) %>%
+             mutate(tjsp.ID = as.character(tjsp.ID)) %>%
+             distinct(case.judge, .keep_all = TRUE)
+    return(cases)
+  }
+
+  # 2. group cases by court to create sample from which to pull observations
+  sampleCourts <- function(df, court, n, var, ...){
+    # create sliced dataset from court ID
+    df <- filter(df, tjsp.ID == court) %>% select(var)
+    # draw the number of observations from dataset
+    sim <- sample_n(df, as.integer(n), ...)
+    # assign new name to variables
+    sim <- unname(unlist(sim))
+    # return call
+    return(sim)
+  }
+
+  # 4. create function to execute monte carlo simulations
+  simulateVar <- function(dataset1 = df, dataset2, var, nsim = 1000){
+    # return object
+    object <- tibble(.rows = nrow(dataset1))
+    # execute loop creating monte carlo simulation for covariate age
+    for (x in 1:nsim) {
+      # create vector containing simulation results
+      simulations <- c()
+      # execute loop to create simulations
+      for (i in 1:nrow(dataset2)){
+        # create list of arguments
+        args <- list(
+          dataset1, as.character(dataset2[i, 'tjsp.ID']),
+          dataset2[i, 'n'], var, replace = TRUE
+        )
+        # call to sampleCourts using args from cases
+        row <- do.call(sampleCourts, args)
+        # bind onto vector
+        simulations <- c(simulations, row)
+      }
+      # convert to numeric
+      simulations <- as.numeric(simulations)
+      # extract mean and iqr
+      object <- bind_cols(object, sim = simulations)
+      # print progress
+      if (x %% 100 == 0) {print(x)}
+    }
+    return(object)
+  }
+
+  # execute internal functions to compute number of cases and simulations
+  if (return == 'simulation') {
+    object <- simulateVar(dataset2 = countJudges(), var = var)
+  } else {
+    object <- countJudges()
+  }
+
+  # return call
   return(object)
 }
 
@@ -382,34 +374,38 @@ simulateVar <- function(dataset1, dataset2, var, nsim = 1000){
 
 # # create simulated datasets
 # # 1. simulation of random assignment using politician.age
-# simulation_age <- simulateVar(tjspAnalysis, cases, 'candidate.age')
+# simulation_age <- produceSimulations(tjspAnalysis, 'candidate.age')
 
 # # 2. simulation of politician outcome using sct decision favorable
-# simulation_out <- simulateVar(tjspAnalysis, cases, 'sct.favorable')
+# simulation_out <- produceSimulations(tjspAnalysis, 'sct.favorable')
 
 # # 3. simulation of politician outcome using sct decision favorable
-# simulation_net <- simulateVar(tjspAnalysis, cases, 'polit.net.claim')
+# simulation_net <- produceSimulations(tjspAnalysis, 'polit.net.claim')
 
 # # 4. simulation of politician outcome when politician is claimant
-# simulation_out_autor <- simulateVar(tjspAnalysis, cases, 'claimant.win.polit')
+# simulation_out_autor1 <- produceSimulations(tjspAnalysis, 'claimant.win.polit')
+# simulation_out_autor2 <- produceSimulations(tjspAnalysis, 'case.claimant.win')
 
 # # 5. simulation of politician outcome when politician is defendant
-# simulation_out_reu <- simulateVar(tjspAnalysis, cases, 'defendant.win.polit')
+# simulation_out_reu1 <- produceSimulations(tjspAnalysis, 'defendant.win.polit')
+# simulation_out_reu2 <- produceSimulations(tjspAnalysis, 'case.defendant.win')
 
 # # 6. simulation of politician outcome when politician is claimant
-# randomcases_autor <- simulateVar(tjspAnalysisRandom, casesRandom,'claimant.win')
+# randomcases_autor <- produceSimulations(tjspAnalysisRandom, 'claimant.win')
 
 # # 7. simulation of politician outcome when politician is defendant
-# randomcases_reu <- simulateVar(tjspAnalysisRandom, casesRandom, 'defendant.win')
+# randomcases_reu <- produceSimulations(tjspAnalysisRandom, 'defendant.win')
 
 # # save datasets
-# save(simulation_age,       file = 'data/tjsp_simulation_age.Rda')
-# save(simulation_out,       file = 'data/tjsp_simulation_out.Rda')
-# save(simulation_net,       file = 'data/tjsp_simulation_net.Rda')
-# save(simulation_out_autor, file = 'data/tjsp_simulation_out_autor.Rda')
-# save(simulation_out_reu,   file = 'data/tjsp_simulation_out_reu.Rda')
-# save(randomcases_autor,    file = 'data/tjsp_randomcases_autor.Rda')
-# save(randomcases_reu,      file = 'data/tjsp_randomcases_reu.Rda')
+# save(simulation_age,        file = 'data/tjsp_simulation_age.Rda')
+# save(simulation_out,        file = 'data/tjsp_simulation_out.Rda')
+# save(simulation_net,        file = 'data/tjsp_simulation_net.Rda')
+# save(simulation_out_autor1, file = 'data/tjsp_simulation_out_autor1.Rda')
+# save(simulation_out_autor2, file = 'data/tjsp_simulation_out_autor2.Rda')
+# save(simulation_out_reu1,    file = 'data/tjsp_simulation_out_reu1.Rda')
+# save(simulation_out_reu2,    file = 'data/tjsp_simulation_out_reu2.Rda')
+# save(randomcases_autor,     file = 'data/tjsp_randomcases_autor.Rda')
+# save(randomcases_reu,       file = 'data/tjsp_randomcases_reu.Rda')
 
 # 3. calculate moments of simulated distribution and return them in a list
 calculateMoments <- function(judges, simulation){
@@ -436,34 +432,56 @@ calculateMoments <- function(judges, simulation){
   return(obj)
 }
 
+# create cases variables
+cases1 <- produceSimulations(tjspAnalysis, 'candidate.age', 'judges')
+cases2 <- produceSimulations(tjspAnalysis, 'sct.favorable', 'judges')
+cases3 <- produceSimulations(tjspAnalysis, 'polit.net.claim', 'judges')
+cases4 <- produceSimulations(tjspAnalysis, 'claimant.win.polit', 'judges')
+cases5 <- produceSimulations(tjspAnalysis, 'case.claimant.win', 'judges')
+cases6 <- produceSimulations(tjspAnalysis, 'defendant.win.polit', 'judges')
+cases7 <- produceSimulations(tjspAnalysis, 'case.defendant.win', 'judges')
+cases8 <- produceSimulations(tjspAnalysisRandom, 'claimant.win', 'judges')
+cases9 <- produceSimulations(tjspAnalysisRandom, 'defendant.win', 'judges')
+
 # calculate moments for all five simulations
-s.politicians.age   <- calculateMoments(cases, simulation_age)
-s.politicians.win   <- calculateMoments(cases, simulation_out)
-s.politicians.net   <- calculateMoments(cases, simulation_net)
-s.politicians.autor <- calculateMoments(cases, simulation_out_autor)
-s.politicians.reu   <- calculateMoments(cases, simulation_out_reu)
-s.randomcases.autor <- calculateMoments(casesRandom, randomcases_autor)
-s.randomcases.reu   <- calculateMoments(casesRandom, randomcases_reu)
+s.politicians.age    <- calculateMoments(cases1, simulation_age)
+s.politicians.win    <- calculateMoments(cases2, simulation_out)
+s.politicians.net    <- calculateMoments(cases3, simulation_net)
+s.politicians.autor1 <- calculateMoments(cases4, simulation_out_autor1)
+s.politicians.autor2 <- calculateMoments(cases5, simulation_out_autor2)
+s.politicians.reu1   <- calculateMoments(cases6, simulation_out_reu1)
+s.politicians.reu2   <- calculateMoments(cases7, simulation_out_reu2)
+s.randomcases.autor  <- calculateMoments(cases8, randomcases_autor)
+s.randomcases.reu    <- calculateMoments(cases9, randomcases_reu)
 
 # 4. calculate moments for empirical distribution
-calculateEmpiricalMoments <- function(dataset, variables){
+calculateEmpiricalMoments <- function(dataset, variable){
+
+  # check if variable requires change in the denominator
+  check_var <- str_extract(variable, '^(claimant|defendant)')
+  # if variable requires change in denominator, filter dataset
+  if (!is.na(check_var)) {check_var1 <- str_to_title(check_var)}
+  # check if candidate.litigant.type exists
+  if ('candidate.litigant.type' %in% names(dataset) & !is.na(check_var)){
+    df <- filter(dataset, str_detect(candidate.litigant.type, check_var1))
+  } else {
+    df <- dataset
+  }
 
   # narrow down dataset to age and sct outcome variables
-  dataset %<>% group_by(case.judge) %>% select(case.judge, variables)
+  df %<>%
+    group_by(case.judge) %>%
+    select(case.judge, variable)
 
   # extract moment distributions from empirical dataset (age)
-  empirical.iqr <- dataset %>%
-    select(case.judge, variables) %>%
-    group_by(case.judge) %>%
+  empirical.iqr <- df %>%
     summarize_all(mean) %>%
     summarize_all(IQR) %>%
     select(-case.judge) %>%
     unlist()
 
   # extract moment distributions from empirical dataset (sct favorable)
-  empirical.mean <- dataset %>%
-    select(case.judge, variables) %>%
-    group_by(case.judge) %>%
+  empirical.mean <- df %>%
     summarize_all(mean) %>%
     select(-case.judge) %>%
     lapply(mean) %>%
@@ -474,18 +492,25 @@ calculateEmpiricalMoments <- function(dataset, variables){
 }
 
 # create arguments for calculateEmpiricalMomentsfunction call
-randomcases_args <- list(tjspAnalysisRandom, c('claimant.win', 'defendant.win'))
-politicians_args <- list(tjspAnalysis, c('candidate.age', 'sct.favorable',
-  'claimant.win.polit', 'defendant.win.polit', 'polit.net.claim')
+randomcases_args <- c('claimant.win', 'defendant.win')
+politician_args  <- c(
+  'candidate.age', 'sct.favorable', 'claimant.win.polit', 'defendant.win.polit',
+  'polit.net.claim', 'case.claimant.win', 'case.defendant.win'
 )
 
 # calculate moments for all five simulations
-empirical.politicians <- do.call(calculateEmpiricalMoments, politicians_args)
-empirical.randomcases <- do.call(calculateEmpiricalMoments, randomcases_args)
+empirical.politicians <- mapply(
+  calculateEmpiricalMoments, politician_args,
+  MoreArgs = list(dataset = tjspAnalysis)
+)
+empirical.randomcases <- mapply(
+  calculateEmpiricalMoments, randomcases_args,
+  MoreArgs = list(dataset = tjspAnalysisRandom)
+)
 
 # 5. create function to plot simulation iqr and mean graphs
-graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
-  save = FALSE, name = NULL) {
+graphDistribution <- function(x, y, bins = 25, legend = 'IQR', save = FALSE,
+  name = NULL, round = FALSE){
 
   # initiate plot object
   p <- ggplot() +
@@ -493,33 +518,50 @@ graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
       aes(x = x, fill = 'grey79'), bins = bins, alpha = .5, color = 'black'
     )
 
+    # define break parameters
+  if (round == TRUE) {round <- 3; prop <- 1.5}
+  else               {round <- 1; prop <- 1.2}
+
   # define graphical parameters for y
   y_min  <- 0
-  y_max  <- max(ggplot_build(p)$data[[1]]['y']) + 10
+  y_max  <- prop * max(ggplot_build(p)$data[[1]]['y'])
   y_incr <- round((y_max - y_min) / 10, 0)
-  y_col  <- y_max
+  y_col  <- y_max - y_incr
 
   # define graphical parameters for x
   x_max  <- max(ggplot_build(p)$data[[1]]['x'])
   x_min  <- min(ggplot_build(p)$data[[1]]['x'])
-  x_incr <- round((x_max - x_min) / 5, 2)
+  x_incr <- round((x_max - x_min) / 5, 3)
+  width  <- ggplot_build(p)$data[[1]] %>%
+            {.['xmax'] - .['xmin']} %>%
+            unlist() %>%
+            unname() %>%
+            {.[1]}
 
   # define label parameters
   signif  <- quantile(x, probs = .05)
   pvalue  <- ecdf(x)
   x_value <- pvalue(y)
-  label   <- paste0('p-value = ', round(x_value, 3))
+  IQR_value <- as.character(round(y, 3))
+  IQR_value <- ifelse(nchar(IQR_value) > 7, str_sub(IQR_value, 1, 6), IQR_value)
+  label <- paste0(legend, ' = ', IQR_value, '\n p-value = ', round(x_value, 3))
+  label <- str_replace_all(label, '(\\b0\\.)', '\\.')
+  x_label_pos <- ifelse(x_value < .4, .7 * x_incr, -.7 * x_incr)
+
+  # set breaks based on round
+  x_breaks <- round(seq(x_min, x_max, x_incr), round)
+  y_breaks <- round(seq(y_min, y_max, y_incr), round)
 
   # finish graph
   p <- p +
-    scale_x_continuous(breaks = round(seq(x_min, x_max, x_incr), 1)) +
-    scale_y_continuous(breaks = round(seq(y_min, y_max, y_incr), 1)) +
+    scale_x_continuous(breaks = x_breaks) +
+    scale_y_continuous(breaks = y_breaks) +
     geom_col(
       aes(x = y, y = y_col, fill = 'grey25'), color = 'black', width = width
     ) +
     geom_text(
-      aes(y = y_col, x = y), label = label, family = 'LM Roman 10',
-      position = position_nudge(y = y_incr / 2)
+      aes(x = y, y = y_col), label = label, family = 'LM Roman 10',
+      position = position_nudge(x = x_label_pos, y = .25 * y_incr)
     ) +
     scale_fill_manual(
       name = element_blank(), values = c('grey25', 'grey79'),
@@ -540,7 +582,7 @@ graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
       panel.grid.major.y = element_line(color = 'grey79'),
       legend.position = 'bottom'
     )
-
+p
   # save plot if requested
   if (save == TRUE & !is.null(name)) {
     ggsave(
@@ -553,162 +595,78 @@ graphDistr <- function(x, y, width = .07, bins = 25, legend = 'IQR',
   return(p)
 }
 
+# print matrices
+empirical.politicians;empirical.randomcases
+
 # produce plots for comparison of politician wins
 # 1. random distribution of cases using candidate.age iqr
-graphDistr(
+graphDistribution(
   s.politicians.age$iqr,
-  empirical.politicians$iqr['candidate.age'],
-  save = TRUE, name = 'age-iqr-politicians'
+  empirical.politicians[['iqr', 'candidate.age']],
+  name = 'age-iqr-politicians'
 )
 
-# 2. random distribution of cases using candidate.age mean
-graphDistr(
-  s.politicians.age$mean,
-  empirical.politicians$mean['candidate.age'],
-  width = 1.25, legend = 'Mean',
-  save = TRUE, name = 'age-mean-politicians'
-)
-
-# 3. random distribution of cases using polit.net.claim iqr
-graphDistr(
-  s.politicians.net$iqr,
-  empirical.politicians$iqr['polit.net.claim'],
-  width = 50,
-  save = TRUE, name = 'win-iqr-politicians-netclaim'
-)
-
-# 4. random distribution of cases using polit.net.claim mean
-graphDistr(
-  s.politicians.net$mean,
-  empirical.politicians$mean['polit.net.claim'],
-  width = 1000, legend = 'Mean',
-  save = TRUE, name = 'win-mean-politicians-netclaim'
-)
-
-# 5. pro-politician bias using sct.favorable iqr
-graphDistr(
+# 2. pro-politician bias using sct.favorable iqr
+graphDistribution(
   s.politicians.win$iqr,
-  empirical.politicians$iqr['sct.favorable'],
-  width = .007,
-  save = TRUE, name = 'win-iqr-politicians'
+  empirical.politicians[['iqr', 'sct.favorable']],
+  name = 'win-iqr-politicians'
 )
 
-# 6. pro-politician bias using sct.favorable mean
-graphDistr(
-  s.politicians.win$mean,
-  empirical.politicians$mean['sct.favorable'],
-  width = .03, legend = 'Mean',
-  save = TRUE, name = 'win-mean-politicians'
+# 3. pro-politician bias using sct.favorable mean
+# plot graph
+graphDistribution(
+  simulation_out %>%
+    summarize_all(mean) %>%
+    unlist() %>%
+    unname(),
+  empirical.politicians[['mean', 'sct.favorable']], round = TRUE,
+  legend = 'Mean', name = 'win-mean-politicians'
 )
 
-# 7. pro-politician bias using claimant.win.polit iqr
-graphDistr(
-  s.politicians.autor$iqr,
-  empirical.politicians$iqr['claimant.win.polit'],
-  width = .007,
-  save = TRUE, name = 'win-iqr-politicians-claimant'
-)
+# # create boxplot
+# p <- bind_rows(
 
-# 8. pro-politician bias using claimant.win.polit mean
-graphDistr(
-  s.politicians.autor$mean,
-  empirical.politicians$mean['claimant.win.polit'],
-  width = .03, legend = 'Mean',
-  save = TRUE, name = 'win-mean-politicians-claimant'
-)
+#   # aggregate first dataset to only show results for claimant politicians
+#   tjspAnalysis %>%
+#     group_by(case.judge) %>%
+#     summarize(sct.favorable = mean(sct.favorable)) %>%
+#     transmute(group = 'SCT Favorable: Empirical', win = sct.favorable),
 
-# 9. pro-politician bias using defendant.win.polit iqr
-graphDistr(
-  s.politicians.reu$iqr,
-  empirical.politicians$iqr['defendant.win.polit'],
-  width = .001,
-  save = TRUE, name = 'win-iqr-politicians-defendant'
-)
+#   # aggregate second dataset to show results by judge
+#   runif(514,0, 1) %>%
+#     {tibble(group = 'SCT Favorable: Simulated', win = .)}
+#   ) %>%
+#   mutate(
+#     group = factor(group, levels = c(
+#       'SCT Favorable: Empirical', 'SCT Favorable: Simulated')
+#     )
+#   ) %>%
+#   ggplot(aes(x = group, y = win, fill = group)) +
+#   scale_y_continuous(breaks = seq(0, 1, .125)) +
+#   scale_fill_manual(breaks = NULL, values = c('grey54', 'grey79')) +
+#   geom_boxplot(width = .5) +
+#   labs(y = element_blank(), x = element_blank()) +
+#   theme_bw() +
+#   theme(
+#     axis.title = element_text(size = 10),
+#     axis.title.y = element_text(margin = margin(r = 12)),
+#     axis.title.x = element_blank(),
+#     axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+#     axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
+#     text = element_text(family = 'LM Roman 10'),
+#     panel.border = element_rect(color = 'black', size = 1),
+#     panel.grid.major.x = element_blank(),
+#     panel.grid.minor.x = element_blank(),
+#     panel.grid.major.y = element_line(color = 'grey79'),
+#     panel.grid.minor.y = element_line(color = 'grey79')
+#   )
 
-# 10. pro-politician bias using defendant.win.polit mean
-graphDistr(
-  s.politicians.reu$mean,
-  empirical.politicians$mean['defendant.win.polit'],
-  width = .03, legend = 'Mean',
-  save = TRUE, name = 'win-mean-politicians-defendant'
-)
-
-# 11. pro-politician bias using case.claimant.win iqr
-graphDistr(
-  s.randomcases.autor$iqr,
-  empirical.randomcases$iqr['claimant.win'],
-  width = .005,
-  save = TRUE, name = 'win-iqr-randomcases-claimant'
-)
-
-# 12. pro-politician bias using claimant.win mean
-graphDistr(
-  s.randomcases.autor$mean,
-  empirical.randomcases$mean['claimant.win'],
-  width = .03, legend = 'Mean',
-  save = TRUE, name = 'win-mean-randomcases-claimant'
-)
-
-# 13. pro-politician bias using claimant.win iqr
-graphDistr(
-  s.randomcases.reu$iqr,
-  empirical.randomcases$iqr['defendant.win'],
-  width = .005,
-  save = TRUE, name = 'win-iqr-randomcases-defendant'
-)
-
-# 14. pro-politician bias using case.defendant.win mean
-graphDistr(
-  s.randomcases.reu$mean,
-  empirical.randomcases$mean['defendant.win'],
-  width = .03, legend = 'Mean',
-  save = TRUE, name = 'win-mean-randomcases-defendant'
-)
-
-# create boxplot
-p <- bind_rows(
-
-  # aggregate first dataset to only show results for claimant politicians
-  tjspAnalysis %>%
-    group_by(case.judge) %>%
-    summarize(sct.favorable = mean(sct.favorable)) %>%
-    transmute(group = 'SCT Favorable: Empirical', win = sct.favorable),
-
-  # aggregate second dataset to show results by judge
-  s.politicians.win$mean %>%
-    tibble::enframe(name = NULL) %>%
-    transmute(group = 'SCT Favorable: Simulated', win = value)
-  ) %>%
-  mutate(
-    group = factor(group, levels = c(
-      'SCT Favorable: Empirical', 'SCT Favorable: Simulated')
-    )
-  ) %>%
-  ggplot(aes(x = group, y = win, fill = group)) +
-  scale_y_continuous(breaks = seq(0, 1, .125)) +
-  scale_fill_manual(breaks = NULL, values = c('grey54', 'grey79')) +
-  geom_boxplot(width = .5) +
-  labs(y = 'Politician Win Average Per Judge', x = element_blank()) +
-  theme_bw() +
-  theme(
-    axis.title = element_text(size = 10),
-    axis.title.y = element_text(margin = margin(r = 12)),
-    axis.title.x = element_blank(),
-    axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-    axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
-    text = element_text(family = 'LM Roman 10'),
-    panel.border = element_rect(color = 'black', size = 1),
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor.x = element_blank(),
-    panel.grid.major.y = element_line(linetype = 'dashed', color = 'grey79'),
-    panel.grid.minor.y = element_line(linetype = 'dashed', color = 'grey79')
-  )
-
-# save plot
-ggsave(
-  filename = 'sct-favorable-boxplot.pdf', plot = p, device = cairo_pdf,
-  path = 'plots', dpi = 100, width = 7, height = 5
-)
+# # save plot
+# ggsave(
+#   filename = 'sct-favorable-boxplot.pdf', plot = p, device = cairo_pdf,
+#   path = 'plots', dpi = 100, width = 7, height = 5
+# )
 
 ### regression discontinuity analysis
 # create vector of election dates
@@ -856,22 +814,192 @@ ggsave(
   width = 7, height = 5
 )
 
-### difference-in-differences analysis
-# create time and treatment variables
-tjspElected$time  <- tjspElected %$% ifelse(case.lastupdate > rd.date, 1, 0)
-tjspElected$treat <- tjspElected %$% ifelse(candidate.elect == 1, 1, 0)
+### sample representativeness
 
-# run test regression
-lfe::felm(sct.favorable ~ time + treat + time * treat + case.duration +
-  case.claim + judge.pay + candidate.age + candidate.experience +
-  candidate.expenditure + candidate.ethnicity + candidate.gender +
-  candidate.education + candidate.maritalstatus |
-  ibge.ID + election.ID + party.number + case.subject | 0 |
-  case.judge + tjsp.ID, data = tjspElected, exactDOF = TRUE
+### tables and analysis
+# panel A
+# produce summary statistics table (case level)
+stargazer(
+
+  # summmary table
+  tjspAnalysisRandom %>%
+    select(case.duration, case.claim, claimant.win) %>%
+    as.data.frame(),
+
+  # table cosmetics
+  type = 'text',
+  title = 'Descriptive Statistics',
+  style = 'default',
+  summary = TRUE,
+  # out = 'tables/sumstats_random.tex',
+  out.header = FALSE,
+  covariate.labels = c(covarLabel[1:2], 'Claimant Win Rate'),
+  align = FALSE,
+  digit.separate = 3,
+  digits = 3,
+  digits.extra = 3,
+  font.size = 'scriptsize',
+  header = FALSE,
+  initial.zero = FALSE,
+  model.names = FALSE,
+  label = 'tab:sumstats_random',
+  no.space = FALSE,
+  table.placement = '!htbp',
+  summary.logical = TRUE,
+  summary.stat = c('n', 'mean', 'sd', 'min', 'max')
+)
+
+# produce summary statistics table (judge level)
+stargazer(
+
+  # summary table
+  tjspAnalysisRandom %>%
+    select(case.judge, judge.gender, judge.tenure, judge.pay) %>%
+    group_by(case.judge) %>%
+    filter(row_number() == 1) %>%
+    as.data.frame(),
+
+  # table cosmetics
+  type = 'text',
+  title = 'Descriptive Statistics',
+  style = 'default',
+  summary = TRUE,
+  # out = 'tables/sumstats_random.tex',
+  out.header = FALSE,
+  covariate.labels = covarLabel[c(3,5,4)],
+  align = FALSE,
+  digit.separate = 3,
+  digits = 3,
+  digits.extra = 3,
+  font.size = 'scriptsize',
+  header = FALSE,
+  initial.zero = FALSE,
+  model.names = FALSE,
+  label = 'tab:sumstats_random',
+  no.space = FALSE,
+  table.placement = '!htbp',
+  summary.logical = TRUE,
+  summary.stat = c('n', 'mean', 'sd', 'min', 'max')
+)
+
+# panel B
+# case-level covariates
+case.level.politician <- tjspAnalysis %>%
+  select(
+    case.duration, case.claim, claimant.win = case.claimant.win,
+    defendant.win = case.defendant.win, candidate.litigant.type
+  ) %>%
+  select(-candidate.litigant.type) %>%
+  as.list()
+case.level.random <- tjspAnalysisRandom %>%
+  select(case.duration, case.claim, claimant.win, defendant.win) %>%
+  as.list()
+
+# judge-level covariates
+judge.level.politician <- tjspAnalysis %>%
+  select(case.judge, judge.gender, judge.tenure, judge.pay) %>%
+  group_by(case.judge) %>%
+  filter(row_number() == 1) %>%
+  replace_na(list(judge.tenure = 3382)) %>%
+  ungroup() %>%
+  select(-case.judge) %>%
+  as.list()
+judge.level.random <- tjspAnalysisRandom %>%
+  select(case.judge, judge.gender, judge.tenure, judge.pay) %>%
+  group_by(case.judge) %>%
+  filter(row_number() == 1) %>%
+  ungroup() %>%
+  select(-case.judge) %>%
+  as.list()
+
+# create function to produce table of balance tests
+balanceTest <- function(list1, list2) {
+  # loop to run t.tests per element in list
+  for (i in seq(1, length(list1))) {
+    var1 <- unlist(list1[i])
+    var2 <- unlist(list2[i])
+    output <- t.test(var1, var2)
+    row <- output %>%
+      {list(.$estimate[1], .$estimate[2], .$estimate[1] - .$estimate[2],
+            .$statistic, .$p.value)} %>%
+      unlist() %>%
+      round(3) %>%
+      as.character() %>%
+      str_replace_all('(\\b0\\.)([0-9]{3,3}\\b)', '\\.\\2') %>%
+      str_replace_all('(\\b[0-9]{3,5})(\\.)(.)*', '\\1')
+    names(row) <- c('v1', 'v2', 'v3', 'v4', 'v5')
+    if (i == 1) {table <- bind_rows(row)}
+    else {table <- bind_rows(table, row)}
+  }
+  return(table)
+}
+
+# produce both tables
+table1 <- balanceTest(case.level.politician, case.level.random)
+table2 <- balanceTest(judge.level.politician, judge.level.random)
+
+# merge tables and print them. insert numbers into final table
+bind_rows(table1, table2) %>%
+xtable::xtable()
+
+# create function to compare all units of both samples
+compareToRandom <- function(x, y) {
+  # perform t-test on two distributions of court outcomes
+  row <- t.test(x, y)
+  # extract statistics from t-test
+  output <- row %$%
+    c(estimate[1], estimate[2], estimate[1] - estimate[2], statistic, p.value)
+  # assign names to vector
+  names(output) <- c('politicians', 'random', 'diff', 't-stat', 'p-value')
+  return(output)
+}
+
+# compare all claimants in politician sample vs. all claimants in random sample
+length(s.politicians.autor2$mean);length(s.randomcases.autor$mean);
+length(s.politicians.autor1$mean);length(s.randomcases.autor$mean);
+length(s.politicians.reu2$mean);length(s.randomcases.reu$mean);
+length(s.politicians.reu1$mean);length(s.randomcases.reu$mea)
+
+bind_rows(
+  compareToRandom(s.politicians.autor2$mean, s.randomcases.autor$mean),
+  compareToRandom(s.politicians.autor1$mean, s.randomcases.autor$mean),
+  compareToRandom(s.politicians.reu2$mean, s.randomcases.reu$mean),
+  compareToRandom(s.politicians.reu1$mean, s.randomcases.reu$mean)
 ) %>%
-summary()
+xtable::xtable(digits = 3)
 
-# there is no effect of election on court outcomes
+
+# 8. pro-politician bias using claimant.win.polit mean
+graphDistribution(
+  s.randomcases.autor$mean,
+  s.politicians.autor1$mean %>% mean(),
+  legend = 'Mean', round = TRUE,
+  name = 'win-mean-politicians-claimant'
+)
+
+# 9. pro-politician bias using defendant.win.polit iqr
+graphDistribution(
+  s.randomcases.reu$mean,
+  s.politicians.reu1$mean %>% mean(),
+  legend = 'Mean', round = TRUE,
+  name = 'win-mean-politicians-defendant'
+)
+# ### difference-in-differences analysis
+# # create time and treatment variables
+# tjspElected$time  <- tjspElected %$% ifelse(case.lastupdate > rd.date, 1, 0)
+# tjspElected$treat <- tjspElected %$% ifelse(candidate.elect == 1, 1, 0)
+
+# # run test regression
+# lfe::felm(sct.favorable ~ time + treat + time * treat + case.duration +
+#   case.claim + judge.pay + candidate.age + candidate.experience +
+#   candidate.expenditure + candidate.ethnicity + candidate.gender +
+#   candidate.education + candidate.maritalstatus |
+#   ibge.ID + election.ID + party.number + case.subject | 0 |
+#   case.judge + tjsp.ID, data = tjspElected, exactDOF = TRUE
+# ) %>%
+# summary()
+
+# # there is no effect of election on court outcomes
 
 # remove everything for serial sourcing
 rm(list = ls())
