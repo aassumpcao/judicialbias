@@ -38,43 +38,48 @@ rstudioapi::openProject('2019 Judicial Bias.Rproj')
 # they will take a long time to process (> 44 hours if laptop; > 33 hours if
 # cluster). you are better off using the final datasets than producing them;
 # nonetheless, i include all files for replication and transparency purposes if
-# you are interested in a particular step taken.
+# you are interested in one particular step i took.
 
-# wrangle candidate data
-source('scripts/01_tjsp_candidates.R')
+# # wrangle candidate data
+# source('scripts/01_tjsp_candidates.R')
 
-# python3.7: install packages from requirements.txt to run the next script.
-system2('cat scripts/requirements.txt | xargs -n 1 pip install')
+# # python3.7: install packages from requirements.txt to run the next script.
+# system2('cat scripts/requirements.txt | xargs -n 1 pip install')
 
-# find lawsuits by politician using their SSN
-system2('python3.7 scripts/00_tjsp_scraper.py &')
+# # find lawsuits by politician using their SSN
+# system2('python3.7 scripts/00_tjsp_scraper.py &')
 
-# merge court id with municipality id
-system2('python3.7 scripts/01_tjsp_lawsuits.py &')
+# # merge court id with municipality id
+# system2('python3.7 scripts/01_tjsp_lawsuits.py &')
 
-# download court documents for cases involving politicians
-system2('python3.7 scripts/02_tjsp_scraper.py &')
+# # download court documents for cases involving politicians
+# system2('python3.7 scripts/02_tjsp_scraper.py &')
 
-# download court documents for random cases at the same sct
-system2('python3.7 scripts/03_tjsp_random_cases.py &')
+# # download court documents for random cases at the same sct
+# system2('python3.7 scripts/03_tjsp_random_cases.py &')
 
-# parse politician court documents
-system2('python3.7 scripts/04_tjsp_parser.py &')
+# # parse politician court documents
+# system2('python3.7 scripts/04_tjsp_parser.py &')
 
-# parse random cases court documents
-system2('python3.7 scripts/05_tjsp_parser_random_cases.py &')
-system2('python3.7 scripts/06_tjsp_fix_parsing.py &')
+# # parse random cases court documents
+# system2('python3.7 scripts/05_tjsp_parser_random_cases.py &')
+# system2('python3.7 scripts/06_tjsp_fix_parsing.py &')
 
-# wrangle judicial data
-source('scripts/02_tjsp_sentences.R')
-source('scripts/03_tjsp_random_sentences.R')
+# # wrangle judicial data
+# source('scripts/02_tjsp_sentences.R')
+# source('scripts/03_tjsp_random_sentences.R')
 
-# wrangle judge data
-source('scripts/04_tjsp_judges.R')
+# # wrangle judge data
+# source('scripts/04_tjsp_judges.R')
+
+### analysis scripts
+# these scripts produce the analysis in the paper. it doesn't take longer than
+# 5 minutes to run the entire analysis.
 
 # prepare analysis for paper
 source('scripts/05_tjsp_analysis_prep.R')
 
 # produce paper analysis
 source('scripts/06_tjsp_analysis1.R')
-source('scripts/07_tjsp_analysis2.R')
+source('scripts/06_tjsp_analysis2.R')
+source('scripts/06_tjsp_analysis3.R')

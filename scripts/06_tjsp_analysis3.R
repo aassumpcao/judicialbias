@@ -63,15 +63,20 @@ test_data      <- bake(trained_rec,     new_data = tjsp_test)
 train_data_dnn <- bake(trained_rec_dnn, new_data = tjsp_train)
 test_data_dnn  <- bake(trained_rec_dnn, new_data = tjsp_test)
 
+# prepare cross-validation objects for
+train_control <- caret::trainControl(method = 'cv', number = 5)
+
 ### train models
 # model 1: random forest
 rf_model <- randomForest::randomForest(
-  sct.favorable ~ ., ntree = 1000, mtry = 10, data = train_data
+  sct.favorable ~ ., ntree = 1000, mtry = 10, data = train_data,
+  trControl = train_control
 )
 
 # model 2: logistic lasso
 caret_glm_model <- caret::train(
-  sct.favorable ~ ., method = 'glmnet', data = train_data
+  sct.favorable ~ ., method = 'glmnet', data = train_data,
+  trControl = train_control
 )
 
 # model 3: deep neural network
@@ -97,15 +102,16 @@ dnn_fit <- dnn_model %>%
   fit(
     x = as.matrix(train_data_dnn[,-1]),
     y = as.numeric(as.character(train_data_dnn$sct.favorable)),
-    epochs = 50, batch_size = 128, validation_split = .1
+    epochs = 50, batch_size = 128, validation_split = .2
   )
 
 # model 4: extreme gradient boosting
 caret_xgb_model <- caret::train(
-  sct.favorable ~ ., method = 'xgbTree', data = train_data
+  sct.favorable ~ ., method = 'xgbTree', data = train_data,
+  trControl = train_control
 )
 
-# execute predictions
+# perform prediction exercises
 predictions <- tibble(
   rf    = predict(rf_model, test_data),
   gbm   = predict(caret_xgb_model, test_data),
@@ -127,10 +133,11 @@ tab_acc <- predictions %>%
   mutate_at(vars(accuracy, kappa), scales::percent, .01)
 
 # rename models in accuracy table
-tab_latex <- mutate(tab_acc,
-  model = c('Random Forest', 'Extreme Gradient Boosting', 'Lasso',
-            'Deep Neural Networks'
-  ))
+tab_acc %>%
+  mutate(
+    model = c('Random Forest','Gradient Boost','Lasso','Deep Neural Networks')
+  ) %>%
+  xtable::xtable()
 
 # produce mean decrease in gini object
 model_information <- list(rf_model, acc = tab_acc$acc[1])
@@ -160,18 +167,19 @@ gini %<>% mutate_at(2, as.integer)
 
 # create labels
 labs <- c(
-  'Judge Tenure', 'Case Claim', 'Judge Pay', 'Politician is Defendant',
-  'Election Share', 'Candidate Age', 'All Others'
+  'Case Claim', 'Judge Tenure', 'Judge Pay', 'Politician is Defendant',
+  'Vote Share', 'Candidate Age', 'All Others'
 )
 
 # produce mean decrease in gini plot
-p <- ggplot(data = gini) +
+p <- gini %>%
+  ggplot() +
   geom_point(aes(MeanDecreaseGini, 1:7), size = 2) +
   geom_segment(
     aes(x = 0, xend = MeanDecreaseGini, y = 1:7, yend = 1:7), size = 1
   ) +
   geom_segment(
-    aes(x = 0, xend = 300, y = 5.5, yend = 5.5), linetype = 'dashed',
+    aes(x = 0, xend = 300, y = 6.5, yend = 6.5), linetype = 'dashed',
     color = 'gray79'
   ) +
   geom_text(
@@ -183,8 +191,8 @@ p <- ggplot(data = gini) +
   xlab('Mean Decrease in Gini') +
   theme(
     axis.title = element_text(size = 10),
-    axis.title.y = element_text(margin = margin(r = 12)),
-    axis.title.x = element_text(margin = margin(t = 12)),
+    # axis.title.y = element_text(margin = margin(r = 12)),
+    # axis.title.x = element_text(margin = margin(t = 12)),
     axis.text.y = element_text(size = 10, lineheight = 1, face = 'bold'),
     axis.text.x = element_text(size = 10, lineheight = 1, face = 'bold'),
     text = element_text(family = 'LM Roman 10'),
@@ -206,21 +214,19 @@ predictor <- Predictor$new(
   rf_model, data = X, y = test_data$sct.favorable, class = 2
 )
 vars <- c(
-  'judge.tenure', 'case.claim', 'judge.pay', 'candidate.litigant.type_Defendant'
+  'case.claim', 'judge.tenure', 'judge.pay', 'candidate.litigant.type_Defendant'
 )
 
 # execute function
 pdp_plots <- map2(vars, labs[1:4], function(.x, .y){
-  FeatureEffect$new(
-    predictor, feature = .x, method = 'pdp'
-  )$plot() +
+  FeatureEffect$new(predictor, feature = .x, method = 'pdp')$plot() +
     labs(x = .y) +
     scale_y_continuous(limits = c(.1, 1)) +
     theme_bw() +
     theme(
       axis.title = element_text(size = 10),
       axis.title.y = element_blank(),
-      axis.title.x = element_text(margin = margin(t = 12)),
+      # axis.title.x = element_text(margin = margin(t = 12)),
       axis.text.y = element_text(size = 10, lineheight = 1.1, face = 'bold'),
       axis.text.x = element_text(size = 10, lineheight = 1.1, face = 'bold'),
       text = element_text(family = 'LM Roman 10'),
@@ -238,6 +244,6 @@ p <- gridExtra::grid.arrange(
 
 # save to disk
 ggsave(
-   plot = p, 'rf-pdp.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
+  plot = p, 'rf-pdp.pdf', device = cairo_pdf, path = 'plots', dpi = 100,
   width = 7, height = 5
 )
