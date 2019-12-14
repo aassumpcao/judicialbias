@@ -3,7 +3,7 @@
 # andre assumpcao and julio trecenti
 # email: andre.assumpcao@gmail.com
 # email: julio.trecenti@gmail.com
-rm(list = ls())
+
 ### data and library calls
 # import libraries
 library(AER)
@@ -689,8 +689,8 @@ tjspElected <- tjspAnalysis %>%
     (voto.secao / voto.total) - (election.votes / voto.total)
   ))
 
-# # save to disk
-# save(tjspElected, file = 'data/tjspElected.Rda')
+# save to disk
+save(tjspElected, file = 'data/tjspElected.Rda')
 
 # different bandwidths for which we want to test everything
 bws <- c(.40, .35, .30, .25, .20, .15, .10, .0842, .05, .01)
@@ -968,22 +968,21 @@ bind_rows(
 ) %>%
 xtable::xtable(digits = 3)
 
+# # 8. pro-politician bias using claimant.win.polit mean
+# graphDistribution(
+#   s.randomcases.autor$mean,
+#   s.politicians.autor1$mean %>% mean(),
+#   legend = 'Mean', round = TRUE,
+#   name = 'win-mean-politicians-claimant'
+# )
 
-# 8. pro-politician bias using claimant.win.polit mean
-graphDistribution(
-  s.randomcases.autor$mean,
-  s.politicians.autor1$mean %>% mean(),
-  legend = 'Mean', round = TRUE,
-  name = 'win-mean-politicians-claimant'
-)
-
-# 9. pro-politician bias using defendant.win.polit iqr
-graphDistribution(
-  s.randomcases.reu$mean,
-  s.politicians.reu1$mean %>% mean(),
-  legend = 'Mean', round = TRUE,
-  name = 'win-mean-politicians-defendant'
-)
+# # 9. pro-politician bias using defendant.win.polit iqr
+# graphDistribution(
+#   s.randomcases.reu$mean,
+#   s.politicians.reu1$mean %>% mean(),
+#   legend = 'Mean', round = TRUE,
+#   name = 'win-mean-politicians-defendant'
+# )
 # ### difference-in-differences analysis
 # # create time and treatment variables
 # tjspElected$time  <- tjspElected %$% ifelse(case.lastupdate > rd.date, 1, 0)
