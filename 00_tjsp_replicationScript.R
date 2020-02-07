@@ -30,8 +30,8 @@ if (!require(stringdist)){install.packages('stringdist')}
 if (!require(tidyverse)) {install.packages('tidyverse')}
 if (!require(xtable))    {install.packages('xtable')}
 
-# load rproj (comment out if using another R IDE)
-rstudioapi::openProject('2019 Judicial Bias.Rproj')
+# # load rproj (comment out if using another R IDE)
+# rstudioapi::openProject('2019 Judicial Bias.Rproj')
 
 ### wrangling scripts
 # these scripts wrangle all data used in this paper. you should not run them as
@@ -40,8 +40,8 @@ rstudioapi::openProject('2019 Judicial Bias.Rproj')
 # nonetheless, i include all files for replication and transparency purposes if
 # you are interested in one particular step i took.
 
-# # wrangle candidate data
-# source('scripts/01_tjsp_candidates.R')
+# wrangle candidate data
+source('scripts/01_tjsp_candidates.R')
 
 # # python3.7: install packages from requirements.txt to run the next script.
 # system2('cat scripts/requirements.txt | xargs -n 1 pip install')
@@ -65,12 +65,12 @@ rstudioapi::openProject('2019 Judicial Bias.Rproj')
 # system2('python3.7 scripts/05_tjsp_parser_random_cases.py &')
 # system2('python3.7 scripts/06_tjsp_fix_parsing.py &')
 
-# # wrangle judicial data
-# source('scripts/02_tjsp_sentences.R')
-# source('scripts/03_tjsp_random_sentences.R')
+# wrangle judicial data
+source('scripts/02_tjsp_sentences.R')
+source('scripts/03_tjsp_random_sentences.R')
 
-# # wrangle judge data
-# source('scripts/04_tjsp_judges.R')
+# wrangle judge data
+source('scripts/04_tjsp_judges.R')
 
 ### analysis scripts
 # these scripts produce the analysis in the paper. it doesn't take longer than

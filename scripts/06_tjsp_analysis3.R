@@ -6,6 +6,7 @@
 
 ### data and library calls
 # import libraries
+library(magrittr)
 library(tidyverse)
 library(patchwork)
 library(recipes)
